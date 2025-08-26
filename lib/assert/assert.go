@@ -16,18 +16,21 @@ func New(t *testing.T) *Assert {
 
 func (a *Assert) NoError(err error) {
 	if err != nil {
+		fmt.Printf("No error expected, got %v instead.", err)
 		a.t.Fail()
 	}
 }
 
 func (a *Assert) Error(err error) {
 	if err == nil {
+		fmt.Printf("Error expected, got %v instead.", err)
 		a.t.Fail()
 	}
 }
 
 func (a *Assert) True(stmt bool) {
 	if !stmt {
+		fmt.Println("Condition not true!")
 		a.t.Fail()
 	}
 }
