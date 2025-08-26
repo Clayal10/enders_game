@@ -26,6 +26,11 @@ const (
 	TypeVersion    messageType = 14
 )
 
+const (
+	maxStringLen  = 32
+	messageLength = 67
+)
+
 // Those using this library will need to use this function on the returned interface
 // to know which type will need to be used for assertion.
 type LurkMessage interface {
@@ -45,9 +50,13 @@ func Unmarshal(data []byte) (LurkMessage, error) {
 	case TypeMessage:
 		return unmarshalMessage(data)
 	case TypeChangeRoom:
+		return unmarshalChangeRoom(data)
 	case TypeFight:
+		return &Fight{Type: TypeFight}, nil
 	case TypePVPFight:
+		return unmarshalPVP(data)
 	case TypeLoot:
+		return unmarshalLoot(data)
 	case TypeStart:
 	case TypeError:
 	case TypeAccept:
@@ -63,17 +72,26 @@ func Unmarshal(data []byte) (LurkMessage, error) {
 
 // Marshal Will take any LurkMessage object and return a byte array
 // ready for messaging.
-func Marshal(lm any) ([]byte, error) {
-	msg, ok := lm.(LurkMessage)
-	if !ok {
-		return nil, cross.ErrInvalidMessageType
-	}
-	switch msg.GetType() {
+func Marshal(lm LurkMessage) ([]byte, error) {
+	switch lm.GetType() {
 	case TypeMessage:
+		if msg, ok := lm.(*Message); ok {
+			return marshalMessage(msg), nil
+		}
 	case TypeChangeRoom:
+		if cr, ok := lm.(*ChangeRoom); ok {
+			return marshalChangeRoom(cr), nil
+		}
 	case TypeFight:
+		return []byte{0x03}, nil
 	case TypePVPFight:
+		if pvp, ok := lm.(*PVPFight); ok {
+			return marshalPVP(pvp), nil
+		}
 	case TypeLoot:
+		if l, ok := lm.(*Loot); ok {
+			return marshalLoot(l), nil
+		}
 	case TypeStart:
 	case TypeError:
 	case TypeAccept:
@@ -110,7 +128,7 @@ func (m *Message) GetType() messageType {
 }
 
 func unmarshalMessage(data []byte) (*Message, error) {
-	if len(data) < 8 {
+	if len(data) < 67 {
 		return nil, cross.ErrFrameTooSmall
 	}
 	m := &Message{}
@@ -120,12 +138,12 @@ func unmarshalMessage(data []byte) (*Message, error) {
 	msgLen := binary.LittleEndian.Uint16(data[offset:])
 	offset += 2
 
-	l := getNulTermLen(data[offset:])
+	l := getNullTermLen(data[offset:])
 	m.RName = string(data[offset : offset+l])
-	offset += l + 1
-	l = getNulTermLen(data[offset:])
+	offset += maxStringLen
+	l = getNullTermLen(data[offset:])
 	m.SName = string(data[offset : offset+l])
-	offset += l + 1
+	offset += maxStringLen - 1
 
 	// Check for narration
 	if data[offset] == 1 {
@@ -137,13 +155,49 @@ func unmarshalMessage(data []byte) (*Message, error) {
 	return m, nil
 }
 
+func marshalMessage(msg *Message) []byte {
+	msgLength := uint16(len(msg.Text))
+	ba := make([]byte, msgLength+messageLength)
+
+	offset := 0
+	ba[offset] = byte(msg.Type)
+	offset++
+	binary.LittleEndian.PutUint16(ba[offset:], msgLength)
+	offset += 2
+	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.RName))
+	offset += maxStringLen
+	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.SName))
+	offset += maxStringLen - 1
+	ba[offset] = boolToByte(msg.Narration)
+	offset++
+	copy(ba[offset:], []byte(msg.Text))
+	return ba
+}
+
 type ChangeRoom struct {
 	Type       messageType
-	RoomNumber int
+	RoomNumber uint16
 }
 
 func (cr *ChangeRoom) GetType() messageType {
 	return cr.Type
+}
+
+func unmarshalChangeRoom(data []byte) (*ChangeRoom, error) {
+	if len(data) < 3 {
+		return nil, cross.ErrFrameTooSmall
+	}
+	return &ChangeRoom{
+		Type:       messageType(data[0]),
+		RoomNumber: binary.LittleEndian.Uint16(data[1:]),
+	}, nil
+}
+
+func marshalChangeRoom(cr *ChangeRoom) []byte {
+	ba := make([]byte, 3)
+	ba[0] = byte(cr.Type)
+	binary.LittleEndian.PutUint16(ba[1:], cr.RoomNumber)
+	return ba
 }
 
 type Fight struct {
@@ -163,6 +217,26 @@ func (pvp *PVPFight) GetType() messageType {
 	return pvp.Type
 }
 
+func unmarshalPVP(data []byte) (*PVPFight, error) {
+	if len(data) < maxStringLen+1 {
+		return nil, cross.ErrFrameTooSmall
+	}
+
+	nameLen := getNullTermLen(data[1:])
+
+	return &PVPFight{
+		Type:       messageType(data[0]),
+		TargetName: string(data[1 : nameLen+1]),
+	}, nil
+}
+
+func marshalPVP(pvp *PVPFight) []byte {
+	ba := make([]byte, maxStringLen+1)
+	ba[0] = byte(pvp.Type)
+	copy(ba[1:], getNullTermedString(pvp.TargetName))
+	return ba
+}
+
 type Loot struct {
 	Type       messageType
 	TargetName string // 32 bytes
@@ -170,6 +244,26 @@ type Loot struct {
 
 func (l *Loot) GetType() messageType {
 	return l.Type
+}
+
+func unmarshalLoot(data []byte) (*Loot, error) {
+	if len(data) < maxStringLen+1 {
+		return nil, cross.ErrFrameTooSmall
+	}
+
+	nameLen := getNullTermLen(data[1:])
+
+	return &Loot{
+		Type:       messageType(data[0]),
+		TargetName: string(data[1 : nameLen+1]),
+	}, nil
+}
+
+func marshalLoot(loot *Loot) []byte {
+	ba := make([]byte, maxStringLen+1)
+	ba[0] = byte(loot.Type)
+	copy(ba[1:], getNullTermedString(loot.TargetName))
+	return ba
 }
 
 type Start struct {
@@ -268,15 +362,28 @@ func (v *Version) GetType() messageType {
 	return v.Type
 }
 
-const maxStringLen = 32
-
 // data should be a slice starting at the start of a null terminated string.
-func getNulTermLen(data []byte) (length int) {
+func getNullTermLen(data []byte) (length int) {
 	for _, b := range data {
-		if b == '\x00' || length == maxStringLen {
+		if b == 0 || length == maxStringLen {
 			break
 		}
 		length++
 	}
 	return
+}
+
+func getNullTermedString(value string) []byte {
+	nulls := make([]byte, maxStringLen-len(value))
+	for i := range nulls {
+		nulls[i] = 0
+	}
+	return append([]byte(value), nulls...)
+}
+
+func boolToByte(cond bool) byte {
+	if cond {
+		return 1
+	}
+	return 0
 }

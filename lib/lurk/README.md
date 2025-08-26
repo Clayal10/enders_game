@@ -100,7 +100,7 @@ Can be used by the client to describe a new
 |---|---|---|
 |0|1|Type 10|
 |1|32|Name of player|
-|33|1|Flags. 8 bit word which uses the 5 most significant bits (right most in little endian)|
+|33|1|Flags. 8 bit word which uses the 5 most significant bits (left most)|
 |34|2|Attack|
 |36|2|Defense|
 |38|2|Regen|
@@ -112,9 +112,9 @@ Can be used by the client to describe a new
 
 #### Flag bit word
 
-|0|1|2|3|4|5|6|7|
+|7|6|5|4|3|2|1|0
 |---|---|---|---|---|---|---|---|
-|RESERVED|RESERVED|RESERVED|Ready|Started|Monster|Join Battle|Alive|
+|Alive|Join Battle|Monster|Started|Ready|RESERVED|RESERVED|RESERVED|
 
 ### GAME
 

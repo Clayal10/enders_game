@@ -1,7 +1,10 @@
 // Package assert contains assert functions to make testing less verbose.
 package assert
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 type Assert struct {
 	t *testing.T
@@ -26,5 +29,18 @@ func (a *Assert) Error(err error) {
 func (a *Assert) True(stmt bool) {
 	if !stmt {
 		a.t.Fail()
+	}
+}
+
+// EqualSlice will check each element in each slice and compare that they are the same.
+func (a *Assert) EqualSlice(one []byte, two []byte) {
+	if len(one) != len(two) {
+		a.t.Fail()
+	}
+	for i := range one {
+		if one[i] != two[i] {
+			fmt.Printf("%v is not equal to %v\n", one, two)
+			a.t.Fail()
+		}
 	}
 }
