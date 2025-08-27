@@ -2,6 +2,7 @@ package lurk_test
 
 import (
 	"encoding/binary"
+	"errors"
 	"testing"
 
 	"github.com/Clayal10/enders_game/lib/assert"
@@ -222,6 +223,36 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 		a.True(extension2.Minor == e.Minor)
 		a.EqualSlice(extension2.Extensions[0], e.Extensions[0])
 		a.EqualSlice(extension2.Extensions[1], e.Extensions[1])
+	})
+}
+
+func TestLurkErrorCases(t *testing.T) {
+	a := assert.New(t)
+	t.Run("TestInvalidErrCode", func(_ *testing.T) {
+		e := &lurk.Error{
+			Type:       lurk.TypeError,
+			ErrCode:    10,
+			ErrMessage: "Hello",
+		}
+		ba, err := lurk.Marshal(e)
+		a.NoError(err)
+		a.EqualSlice(ba, []byte{0x7, 0xa, 0x5, 0x0, 0x48, 0x65, 0x6c, 0x6c, 0x6f})
+		_, err = lurk.Unmarshal(ba)
+		a.Error(err)
+		a.True(errors.Is(err, cross.ErrInvalidErrCode))
+	})
+	t.Run("TestInvalidMessageType", func(_ *testing.T) {
+		_, err := lurk.Unmarshal([]byte{82, 43, 53, 1, 00, 0, 24})
+		a.Error(err)
+		a.True(errors.Is(err, cross.ErrInvalidMessageType))
+	})
+	t.Run("TestBadMessageNames", func(_ *testing.T) {
+		_, err := lurk.Unmarshal([]byte{0x1, 0x5, 0x00, // No null padding
+			0x52, 0x61, 0x79, 0x6d, 0x6f, 0x6e, 0x64, 0,
+			0x43, 0x6c, 0x61, 0x79, 0, 0x01,
+			0x48, 0x65, 0x6c, 0x6c, 0x6f})
+		a.Error(err)
+		a.True(errors.Is(err, cross.ErrFrameTooSmall))
 	})
 }
 

@@ -336,9 +336,14 @@ func unmarshalError(data []byte) (*Error, error) {
 		return nil, cross.ErrFrameTooSmall
 	}
 
+	errCode := cross.ErrCode(data[1])
+	if errCode > cross.NoPVP {
+		return nil, cross.ErrInvalidErrCode
+	}
+
 	return &Error{
 		Type:       messageType(data[0]),
-		ErrCode:    cross.ErrCode(data[1]),
+		ErrCode:    errCode,
 		ErrMessage: string(data[4 : 4+msgLen]),
 	}, nil
 }
@@ -482,7 +487,6 @@ func unmarshalCharacter(data []byte) (*Character, error) {
 }
 
 func unmarshalCharacterFlags(data byte) map[string]bool {
-
 	flags := make(map[string]bool)
 	flags[Alive] = aliveBit&data == aliveBit
 	flags[JoinBattle] = joinBit&data == joinBit

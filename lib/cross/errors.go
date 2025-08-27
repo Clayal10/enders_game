@@ -7,6 +7,7 @@ import (
 var (
 	ErrFrameTooSmall      = errors.New("frame too small")
 	ErrInvalidMessageType = errors.New("invalid message type")
+	ErrInvalidErrCode     = errors.New("invalid error code")
 )
 
 type ErrCode byte
