@@ -26,9 +26,28 @@ const (
 	TypeVersion    messageType = 14
 )
 
+// lengthOffset will tell you which messages have a variable length text field
+// as well as the offset in which that value resides.
+//
+// All length fields are 16 bits in each message.
+var lengthOffset = map[messageType]int{
+	TypeMessage:    1,
+	TypeError:      2,
+	TypeRoom:       35,
+	TypeCharacter:  46,
+	TypeConnection: 35,
+	TypeVersion:    3,
+}
+
 const (
-	maxStringLen  = 32
-	messageLength = 67
+	maxStringLen = 32
+	// length of variable length messages  before their text.
+	messageLength    = 67
+	errorLength      = 4
+	roomLength       = 37
+	characterLength  = 48
+	connectionLength = 37
+	versionLength    = 5
 )
 
 // Exported character flags
@@ -44,6 +63,42 @@ const (
 // to know which type will need to be used for assertion.
 type LurkMessage interface {
 	GetType() messageType
+}
+
+// GetVariableLength will return the total byte length of the message based off of
+// the variable length message.
+func GetVariableLength(data []byte) (int, error) {
+	if err := validate(data); err != nil {
+		return 0, err
+	}
+
+	msgType := messageType(data[0])
+
+	idx, ok := lengthOffset[msgType]
+	if !ok {
+		return 0, cross.ErrNoVariableLength
+	}
+
+	if len(data) < idx+2 {
+		return 0, cross.ErrFrameTooSmall
+	}
+
+	msgLength := int(binary.LittleEndian.Uint16(data[idx:]))
+	switch msgType {
+	case TypeMessage:
+		return msgLength + messageLength, nil
+	case TypeError:
+		return msgLength + errorLength, nil
+	case TypeRoom:
+		return msgLength + roomLength, nil
+	case TypeCharacter:
+		return msgLength + characterLength, nil
+	case TypeConnection:
+		return msgLength + connectionLength, nil
+	case TypeVersion:
+		return msgLength + versionLength, nil
+	}
+	return 0, cross.ErrInvalidMessageType
 }
 
 // Unmarshal takes a slice of bytes and returns a LurkMessage interface object. The

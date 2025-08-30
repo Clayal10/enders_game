@@ -7,7 +7,15 @@ type ServerConfig struct {
 // New will create a new server instance that starts all necessary processes
 // for the server. The function will return a list of functions that should be called
 // for the termination of the server
-func New(cfg *ServerConfig) []func() {
+func New(cfg *ServerConfig) ([]func(), error) {
+	rec, err := newReceiver(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	return []func(){}
+	rec.start()
+
+	return []func(){
+		rec.stop,
+	}, nil
 }

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Clayal10/enders_game/apps/server/code/server"
 )
@@ -25,7 +27,14 @@ func main() {
 	cfg, err := getServerConfig(defaultFilePath)
 	fatalOnErr(err)
 
-	cancelFunctions := server.New(cfg)
+	cancelFunctions, err := server.New(cfg)
+	fatalOnErr(err)
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT)
+
+	<-ch
+	log.Println("Terminating Server")
 
 	for _, cf := range cancelFunctions {
 		cf()
