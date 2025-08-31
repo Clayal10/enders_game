@@ -52,9 +52,17 @@ func TestServerFunctionality(t *testing.T) {
 		ba, err := lurk.Marshal(char)
 		a.NoError(err)
 
-		_, err = conn.Write(ba)
+		_, err = conn.Write(ba) // send character
 		a.NoError(err)
 
+		acceptBuffer := buffer[:2]       // keep reusing the buffer
+		n, err = conn.Read(acceptBuffer) // read accept
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeAccept)
 		n, err = conn.Read(buffer)
 		a.NoError(err)
 

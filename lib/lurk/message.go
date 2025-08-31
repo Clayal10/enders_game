@@ -2,6 +2,7 @@ package lurk
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/Clayal10/enders_game/lib/cross"
 )
@@ -26,17 +27,27 @@ const (
 	TypeVersion    MessageType = 14
 )
 
-// lengthOffset will tell you which messages have a variable length text field
-// as well as the offset in which that value resides.
+// LengthOffset is a key that will tell you how many bytes you will need to read per message
+// type to have a full enough message. Fields not denoted with '// X' have fixed length messages
+// and the returned value is good. Otherwise, send it through the 'GetVariableRate' function
+// and find out the real total.
 //
 // All length fields are 16 bits in each message.
-var lengthOffset = map[MessageType]int{
-	TypeMessage:    1,
-	TypeError:      2,
-	TypeRoom:       35,
-	TypeCharacter:  46,
-	TypeConnection: 35,
-	TypeVersion:    3,
+var LengthOffset = map[MessageType]int{
+	TypeMessage:    3,
+	TypeChangeRoom: 3,  // X
+	TypeFight:      1,  // X
+	TypePVPFight:   33, // X
+	TypeLoot:       33, // X
+	TypeStart:      1,  // X
+	TypeError:      4,
+	TypeAccept:     2, // X
+	TypeRoom:       37,
+	TypeCharacter:  48,
+	TypeGame:       7,
+	TypeLeave:      1, // X
+	TypeConnection: 37,
+	TypeVersion:    5,
 }
 
 const (
@@ -74,31 +85,37 @@ func GetVariableLength(data []byte) (int, error) {
 
 	msgType := MessageType(data[0])
 
-	idx, ok := lengthOffset[msgType]
+	idx, ok := LengthOffset[msgType]
 	if !ok {
-		return 0, cross.ErrNoVariableLength
+		return 0, cross.ErrInvalidMessageType
 	}
 
-	if len(data) < idx+2 {
+	if len(data) < idx {
 		return 0, cross.ErrFrameTooSmall
 	}
 
-	msgLength := int(binary.LittleEndian.Uint16(data[idx:]))
 	switch msgType {
 	case TypeMessage:
+		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
 		return msgLength + messageLength, nil
 	case TypeError:
+		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
 		return msgLength + errorLength, nil
 	case TypeRoom:
+		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
 		return msgLength + roomLength, nil
 	case TypeCharacter:
+		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
 		return msgLength + characterLength, nil
 	case TypeConnection:
+		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
 		return msgLength + connectionLength, nil
 	case TypeVersion:
+		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
 		return msgLength + versionLength, nil
+	default:
+		return -1, nil
 	}
-	return 0, cross.ErrInvalidMessageType
 }
 
 // Unmarshal takes a slice of bytes and returns a LurkMessage interface object. The
@@ -422,7 +439,8 @@ func (a *Accept) GetType() MessageType {
 }
 
 func unmarshalAccept(data []byte) (*Accept, error) {
-	if len(data) != 2 {
+	if len(data) < 2 {
+		fmt.Println(len(data))
 		return nil, cross.ErrFrameTooSmall
 	}
 	return &Accept{
@@ -785,6 +803,11 @@ func getNullTermLen(data []byte) (length int) {
 }
 
 func getNullTermedString(value string) []byte {
+	length := len(value)
+	if length >= maxStringLen {
+		value = value[:maxStringLen]
+	}
+
 	nulls := make([]byte, maxStringLen-len(value))
 	for i := range nulls {
 		nulls[i] = 0

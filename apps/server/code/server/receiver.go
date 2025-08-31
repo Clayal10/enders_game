@@ -66,10 +66,19 @@ func (rec *receiver) registerUser(conn net.Conn) {
 
 	if err := rec.sendStart(conn); err != nil {
 		log.Printf("%v: error starting the game", err.Error())
+		return
 	}
 
-	if err := rec.registerPlayer(conn); err != nil {
+	player, err := rec.registerPlayer(conn)
+	if err != nil {
 		log.Printf("%v: error registering player", err.Error())
+		return
+	}
+
+	if err := rec.startGameplay(player, conn); err != nil {
+		// termination of gameplay
+		log.Printf("%v: error during gameplay", err.Error())
+		return
 	}
 
 }
