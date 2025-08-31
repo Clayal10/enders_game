@@ -48,8 +48,7 @@ func TestReadAll(t *testing.T) {
 		conn, err := l.Accept()
 		a.NoError(err)
 
-		g := &game{}
-		buffer, n, err := g.readAll(conn)
+		buffer, n, err := readAll(conn)
 		a.NoError(err)
 		a.True(n > bufferLength)
 

@@ -80,7 +80,9 @@ func (g *game) registerPlayer(conn net.Conn) (string, error) {
 			}
 			break
 		}
-		g.sendError(conn, cross.NotReady, "Please send a [START] message")
+		if err = g.sendError(conn, cross.NotReady, "Please send a [START] message"); err != nil {
+			return "", err
+		}
 	}
 
 	return id, nil
@@ -90,7 +92,7 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 
 	// In this loop, we get the character and send it back after checking the validity of it.
 	for {
-		buffer, n, err := g.readAll(conn) // accept CHARACTER
+		buffer, n, err := readAll(conn) // accept CHARACTER
 		if err != nil {
 			return "", err
 		}
@@ -174,7 +176,7 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	}
 
 	for {
-		buffer, n, err := g.readAll(conn) // accept MESSAGE || CHARACTER || LEAVE
+		buffer, n, err := readAll(conn) // accept MESSAGE || CHARACTER || LEAVE
 		if err != nil {
 			if err = g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
 				return err
@@ -297,7 +299,7 @@ func (g *game) sendAccept(conn net.Conn, action lurk.MessageType) error {
 
 // We want to read exactly the length of the message. This function will do up to 3
 // calls to 'Read' to read exactly one message.
-func (g *game) readAll(conn net.Conn) ([]byte, int, error) {
+func readAll(conn net.Conn) ([]byte, int, error) {
 	buffer := make([]byte, 1)
 	_, err := conn.Read(buffer)
 	if err != nil {
