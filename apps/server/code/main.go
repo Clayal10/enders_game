@@ -19,8 +19,8 @@ const (
 
 var (
 	defaultConfig = fmt.Sprintf(`{
-		"ServerPort": %v,
-	}`, defaultPort)
+	"ServerPort": %v
+}`, defaultPort)
 )
 
 func main() {

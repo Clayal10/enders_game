@@ -52,9 +52,6 @@ func TestServerFunctionality(t *testing.T) {
 		ba, err := lurk.Marshal(char)
 		a.NoError(err)
 
-		fmt.Println(char.Health)
-		fmt.Println(char.Gold)
-
 		_, err = conn.Write(ba)
 		a.NoError(err)
 
@@ -65,6 +62,47 @@ func TestServerFunctionality(t *testing.T) {
 		a.NoError(err)
 
 		a.True(msg.GetType() == lurk.TypeCharacter)
+	})
+	t.Run("TestInvalidCharacterStats", func(_ *testing.T) {
+		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", port))
+		a.NoError(err)
 
+		buffer := make([]byte, 1024)
+
+		n, err := conn.Read(buffer)
+		a.NoError(err)
+
+		msg, err := lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeGame)
+
+		char := &lurk.Character{
+			Type:       lurk.TypeCharacter,
+			Name:       "Clay",
+			Attack:     100,
+			Health:     100,
+			Defense:    90,
+			Regen:      80,
+			RoomNum:    2,
+			PlayerDesc: "A guy who is just programming a game server with stats that I'm not supposed to put in the character",
+		}
+
+		ba, err := lurk.Marshal(char)
+		a.NoError(err)
+
+		_, err = conn.Write(ba)
+		a.NoError(err)
+
+		n, err = conn.Read(buffer)
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeError)
+		e, ok := msg.(*lurk.Error)
+		a.True(ok)
+		a.True(e.ErrCode == cross.StatError)
 	})
 }

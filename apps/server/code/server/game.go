@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/Clayal10/enders_game/lib/cross"
@@ -139,7 +138,6 @@ func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
 
 func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 	if c.Gold != 0 || c.Health != 0 {
-		fmt.Printf("%+v", c)
 		return cross.StatError
 	}
 	if _, ok := g.users[c.Name]; ok {
