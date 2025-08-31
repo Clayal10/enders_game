@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"sync"
+
+	"github.com/Clayal10/enders_game/lib/cross"
 )
 
 type receiver struct {
@@ -47,11 +49,8 @@ func (rec *receiver) start() {
 }
 
 func (rec *receiver) run() {
-	defer rec.listener.Close()
-	for {
-		if !rec.shouldRun {
-			break
-		}
+	defer cross.LogOnErr(rec.listener.Close)
+	for rec.shouldRun {
 		conn, err := rec.listener.Accept()
 		if err != nil {
 			log.Printf("%v: error accepting connection", err.Error())
@@ -61,24 +60,16 @@ func (rec *receiver) run() {
 	}
 }
 
-// This function needs to be able to handle reading and sending back information to the client
-// at any moment.
-//
-// Thoughts:
-//   - We can try to keep the connection as persistent as possible, send a warning when
-//     we disconnect etc. and save the character data on disk for better persistence.
-//   - This function can go in some registry that will 'register' the user, handle communication
-//     and write their information to something at least persistent to this server execution.
+// The 'conn' object will simply get passed through to different functions.
 func (rec *receiver) registerUser(conn net.Conn) {
-	defer conn.Close()
+	defer cross.LogOnErr(conn.Close)
 
-	if err := rec.game.sendStart(conn); err != nil {
+	if err := rec.sendStart(conn); err != nil {
 		log.Printf("%v: error starting the game", err.Error())
 	}
 
-	if err := rec.game.registerPlayer(conn); err != nil {
+	if err := rec.registerPlayer(conn); err != nil {
 		log.Printf("%v: error registering player", err.Error())
-
 	}
 
 }

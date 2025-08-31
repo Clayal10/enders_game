@@ -12,25 +12,25 @@ type game struct {
 	users map[string]*lurk.Character
 	// key is name? monster is a generic name for an npc
 	monsters map[string]*lurk.Character
+	// key is room number. Need to be careful about multithreading this
+	rooms map[uint16]*lurk.Room
 }
 
 // default game values.
 const (
-	initialPoints   = 100
-	gameDescription = ` 
- ____  __ _  ____  ____  ____  _ ____     ___   __   _  _  ____ 
-(  __)(  ( \(    \(  __)(  _ \(// ___)   / __) / _\ ( \/ )(  __)
- ) _) /    / ) D ( ) _)  )   /  \___ \  ( (_ \/    \/ \/ \ ) _) 
-(____)\_)__)(____/(____)(__\_)  (____/   \___/\_/\_/\_)(_/(____)
-
-The world has been ravaged by the most feared and despised being known to man, the formic. When it comes down to preventing their second massacre, will you be the one to step up and destroy them?`
+	initialPoints = 100
 )
 
 func newGame() *game {
-	return &game{
+	g := &game{
 		users:    make(map[string]*lurk.Character),
 		monsters: make(map[string]*lurk.Character),
+		rooms:    make(map[uint16]*lurk.Room),
 	}
+
+	g.rooms = createRooms()
+
+	return g
 }
 
 func (g *game) sendStart(conn net.Conn) error {
@@ -51,6 +51,30 @@ func (g *game) sendStart(conn net.Conn) error {
 }
 
 func (g *game) registerPlayer(conn net.Conn) error {
+	if err := g.addToUser(conn); err != nil {
+		return err
+	}
+
+	buffer := make([]byte, bufferLength)
+
+	var typ lurk.MessageType
+	for typ != lurk.TypeStart {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			return err
+		}
+
+		msg, err := lurk.Unmarshal(buffer[:n])
+		if err != nil {
+			return err
+		}
+		typ = msg.GetType()
+	}
+
+	return nil
+}
+
+func (g *game) addToUser(conn net.Conn) error {
 	buffer := make([]byte, bufferLength)
 
 	// In this loop, we get the character and send it back after checking the validity of it.
@@ -65,8 +89,11 @@ func (g *game) registerPlayer(conn net.Conn) error {
 			if err != nil {
 				return err
 			}
+
 			b := make([]byte, n-bufferLength)
-			conn.Read(b)
+			if _, err = conn.Read(b); err != nil {
+				return err
+			}
 			buffer = append(buffer, b...)
 		}
 
@@ -103,21 +130,6 @@ func (g *game) registerPlayer(conn net.Conn) error {
 		g.users[character.Name] = character
 		break
 	}
-
-	var typ lurk.MessageType
-	for typ != lurk.TypeStart {
-		n, err := conn.Read(buffer)
-		if err != nil {
-			return err
-		}
-
-		msg, err := lurk.Unmarshal(buffer[:n])
-		if err != nil {
-			return err
-		}
-		typ = msg.GetType()
-	}
-
 	return nil
 }
 
