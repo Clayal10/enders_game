@@ -8,7 +8,9 @@ type ServerConfig struct {
 // for the server. The function will return a list of functions that should be called
 // for the termination of the server
 func New(cfg *ServerConfig) ([]func(), error) {
-	rec, err := newReceiver(cfg)
+	game := newGame()
+
+	rec, err := newReceiver(cfg, game)
 	if err != nil {
 		return nil, err
 	}

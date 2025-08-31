@@ -6,31 +6,31 @@ import (
 	"github.com/Clayal10/enders_game/lib/cross"
 )
 
-type messageType byte
+type MessageType byte
 
 // Exported message types.
 const (
-	TypeMessage    messageType = 1
-	TypeChangeRoom messageType = 2
-	TypeFight      messageType = 3
-	TypePVPFight   messageType = 4
-	TypeLoot       messageType = 5
-	TypeStart      messageType = 6
-	TypeError      messageType = 7
-	TypeAccept     messageType = 8
-	TypeRoom       messageType = 9
-	TypeCharacter  messageType = 10
-	TypeGame       messageType = 11
-	TypeLeave      messageType = 12
-	TypeConnection messageType = 13
-	TypeVersion    messageType = 14
+	TypeMessage    MessageType = 1
+	TypeChangeRoom MessageType = 2
+	TypeFight      MessageType = 3
+	TypePVPFight   MessageType = 4
+	TypeLoot       MessageType = 5
+	TypeStart      MessageType = 6
+	TypeError      MessageType = 7
+	TypeAccept     MessageType = 8
+	TypeRoom       MessageType = 9
+	TypeCharacter  MessageType = 10
+	TypeGame       MessageType = 11
+	TypeLeave      MessageType = 12
+	TypeConnection MessageType = 13
+	TypeVersion    MessageType = 14
 )
 
 // lengthOffset will tell you which messages have a variable length text field
 // as well as the offset in which that value resides.
 //
 // All length fields are 16 bits in each message.
-var lengthOffset = map[messageType]int{
+var lengthOffset = map[MessageType]int{
 	TypeMessage:    1,
 	TypeError:      2,
 	TypeRoom:       35,
@@ -62,7 +62,7 @@ const (
 // Those using this library will need to use this function on the returned interface
 // to know which type will need to be used for assertion.
 type LurkMessage interface {
-	GetType() messageType
+	GetType() MessageType
 }
 
 // GetVariableLength will return the total byte length of the message based off of
@@ -72,7 +72,7 @@ func GetVariableLength(data []byte) (int, error) {
 		return 0, err
 	}
 
-	msgType := messageType(data[0])
+	msgType := MessageType(data[0])
 
 	idx, ok := lengthOffset[msgType]
 	if !ok {
@@ -110,7 +110,7 @@ func Unmarshal(data []byte) (LurkMessage, error) {
 	}
 
 	// Various unmarshaling and returning of their respective types.
-	switch messageType(data[0]) {
+	switch MessageType(data[0]) {
 	case TypeMessage:
 		return unmarshalMessage(data)
 	case TypeChangeRoom:
@@ -212,14 +212,14 @@ func validate(data []byte) error {
 }
 
 type Message struct {
-	Type      messageType
+	Type      MessageType
 	RName     string // max 32 bytes. All fields noted with bytes are null terminated '\x00'.
 	SName     string // max 30 bytes
 	Text      string
 	Narration bool
 }
 
-func (m *Message) GetType() messageType {
+func (m *Message) GetType() MessageType {
 	return m.Type
 }
 
@@ -229,7 +229,7 @@ func unmarshalMessage(data []byte) (*Message, error) {
 	}
 	m := &Message{}
 	offset := 0
-	m.Type = messageType(data[offset])
+	m.Type = MessageType(data[offset])
 	offset++
 	msgLen := binary.LittleEndian.Uint16(data[offset:])
 	offset += 2
@@ -271,11 +271,11 @@ func marshalMessage(msg *Message) []byte {
 }
 
 type ChangeRoom struct {
-	Type       messageType
+	Type       MessageType
 	RoomNumber uint16
 }
 
-func (cr *ChangeRoom) GetType() messageType {
+func (cr *ChangeRoom) GetType() MessageType {
 	return cr.Type
 }
 
@@ -284,7 +284,7 @@ func unmarshalChangeRoom(data []byte) (*ChangeRoom, error) {
 		return nil, cross.ErrFrameTooSmall
 	}
 	return &ChangeRoom{
-		Type:       messageType(data[0]),
+		Type:       MessageType(data[0]),
 		RoomNumber: binary.LittleEndian.Uint16(data[1:]),
 	}, nil
 }
@@ -297,19 +297,19 @@ func marshalChangeRoom(cr *ChangeRoom) []byte {
 }
 
 type Fight struct {
-	Type messageType
+	Type MessageType
 }
 
-func (f *Fight) GetType() messageType {
+func (f *Fight) GetType() MessageType {
 	return f.Type
 }
 
 type PVPFight struct {
-	Type       messageType
+	Type       MessageType
 	TargetName string // 32 bytes
 }
 
-func (pvp *PVPFight) GetType() messageType {
+func (pvp *PVPFight) GetType() MessageType {
 	return pvp.Type
 }
 
@@ -321,7 +321,7 @@ func unmarshalPVP(data []byte) (*PVPFight, error) {
 	nameLen := getNullTermLen(data[1:])
 
 	return &PVPFight{
-		Type:       messageType(data[0]),
+		Type:       MessageType(data[0]),
 		TargetName: string(data[1 : nameLen+1]),
 	}, nil
 }
@@ -334,11 +334,11 @@ func marshalPVP(pvp *PVPFight) []byte {
 }
 
 type Loot struct {
-	Type       messageType
+	Type       MessageType
 	TargetName string // 32 bytes
 }
 
-func (l *Loot) GetType() messageType {
+func (l *Loot) GetType() MessageType {
 	return l.Type
 }
 
@@ -350,7 +350,7 @@ func unmarshalLoot(data []byte) (*Loot, error) {
 	nameLen := getNullTermLen(data[1:])
 
 	return &Loot{
-		Type:       messageType(data[0]),
+		Type:       MessageType(data[0]),
 		TargetName: string(data[1 : nameLen+1]),
 	}, nil
 }
@@ -363,20 +363,20 @@ func marshalLoot(loot *Loot) []byte {
 }
 
 type Start struct {
-	Type messageType
+	Type MessageType
 }
 
-func (s *Start) GetType() messageType {
+func (s *Start) GetType() MessageType {
 	return s.Type
 }
 
 type Error struct {
-	Type       messageType
+	Type       MessageType
 	ErrCode    cross.ErrCode
 	ErrMessage string
 }
 
-func (e *Error) GetType() messageType {
+func (e *Error) GetType() MessageType {
 	return e.Type
 }
 
@@ -397,7 +397,7 @@ func unmarshalError(data []byte) (*Error, error) {
 	}
 
 	return &Error{
-		Type:       messageType(data[0]),
+		Type:       MessageType(data[0]),
 		ErrCode:    errCode,
 		ErrMessage: string(data[4 : 4+msgLen]),
 	}, nil
@@ -413,11 +413,11 @@ func marshalError(e *Error) []byte {
 }
 
 type Accept struct {
-	Type   messageType
-	Action messageType
+	Type   MessageType
+	Action MessageType
 }
 
-func (a *Accept) GetType() messageType {
+func (a *Accept) GetType() MessageType {
 	return a.Type
 }
 
@@ -426,8 +426,8 @@ func unmarshalAccept(data []byte) (*Accept, error) {
 		return nil, cross.ErrFrameTooSmall
 	}
 	return &Accept{
-		Type:   messageType(data[0]),
-		Action: messageType(data[1]),
+		Type:   MessageType(data[0]),
+		Action: MessageType(data[1]),
 	}, nil
 }
 
@@ -439,13 +439,13 @@ func marshalAccept(a *Accept) []byte {
 }
 
 type Room struct {
-	Type       messageType
+	Type       MessageType
 	RoomNumber uint16
 	RoomName   string // 32 bytes
 	RoomDesc   string
 }
 
-func (r *Room) GetType() messageType {
+func (r *Room) GetType() MessageType {
 	return r.Type
 }
 
@@ -457,7 +457,7 @@ func unmarshalRoom(data []byte) (*Room, error) {
 	nameLen := getNullTermLen(data[3:])
 
 	room := &Room{
-		Type:       messageType(data[0]),
+		Type:       MessageType(data[0]),
 		RoomNumber: binary.LittleEndian.Uint16(data[1:]),
 		RoomName:   string(data[3 : 3+nameLen]),
 	}
@@ -489,7 +489,7 @@ func marshalRoom(room *Room) []byte {
 }
 
 type Character struct {
-	Type       messageType
+	Type       MessageType
 	Name       string // 32 bytes
 	Flags      map[string]bool
 	Attack     uint16
@@ -501,7 +501,7 @@ type Character struct {
 	PlayerDesc string
 }
 
-func (c *Character) GetType() messageType {
+func (c *Character) GetType() MessageType {
 	return c.Type
 }
 
@@ -511,7 +511,7 @@ func unmarshalCharacter(data []byte) (*Character, error) {
 	}
 
 	c := &Character{
-		Type: messageType(data[0]),
+		Type: MessageType(data[0]),
 	}
 
 	nameLen := getNullTermLen(data[1:])
@@ -606,13 +606,13 @@ const (
 )
 
 type Game struct {
-	Type          messageType
+	Type          MessageType
 	InitialPoints uint16
 	StatLimit     uint16
 	GameDesc      string
 }
 
-func (g *Game) GetType() messageType {
+func (g *Game) GetType() MessageType {
 	return g.Type
 }
 
@@ -621,7 +621,7 @@ func unmarshalGame(data []byte) (*Game, error) {
 		return nil, cross.ErrFrameTooSmall
 	}
 	g := &Game{
-		Type: messageType(data[0]),
+		Type: MessageType(data[0]),
 	}
 	offset := 1
 	g.InitialPoints = binary.LittleEndian.Uint16(data[offset:])
@@ -655,21 +655,21 @@ func marshalGame(g *Game) []byte {
 }
 
 type Leave struct {
-	Type messageType
+	Type MessageType
 }
 
-func (l *Leave) GetType() messageType {
+func (l *Leave) GetType() MessageType {
 	return l.Type
 }
 
 type Connection struct {
-	Type       messageType
+	Type       MessageType
 	RoomNumber uint16
 	RoomName   string //32 bytes
 	RoomDesc   string
 }
 
-func (c *Connection) GetType() messageType {
+func (c *Connection) GetType() MessageType {
 	return c.Type
 }
 
@@ -678,7 +678,7 @@ func unmarshalConnection(data []byte) (*Connection, error) {
 		return nil, cross.ErrFrameTooSmall
 	}
 	c := &Connection{
-		Type:       messageType(data[0]),
+		Type:       MessageType(data[0]),
 		RoomNumber: binary.LittleEndian.Uint16(data[1:]),
 	}
 	offset := 3
@@ -707,13 +707,13 @@ func marshalConnection(c *Connection) []byte {
 }
 
 type Version struct {
-	Type       messageType
+	Type       MessageType
 	Major      byte
 	Minor      byte
 	Extensions [][]byte // For now. Turn into object when we know what it is.
 }
 
-func (v *Version) GetType() messageType {
+func (v *Version) GetType() MessageType {
 	return v.Type
 }
 
@@ -722,7 +722,7 @@ func unmarshalVersion(data []byte) (*Version, error) {
 		return nil, cross.ErrFrameTooSmall
 	}
 	v := &Version{
-		Type:  messageType(data[0]),
+		Type:  MessageType(data[0]),
 		Major: data[1],
 		Minor: data[2],
 	}

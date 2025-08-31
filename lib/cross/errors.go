@@ -23,4 +23,5 @@ const (
 	NoTarget            ErrCode = 6
 	NoFight             ErrCode = 7
 	NoPVP               ErrCode = 8
+	NoError             ErrCode = 255
 )
