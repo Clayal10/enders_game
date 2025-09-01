@@ -242,8 +242,7 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 			}
 			g.handleCharacter(msg, conn)
 		case lurk.TypeLeave:
-			g.handleLeave(conn)
-
+			g.handleLeave(player, conn)
 		}
 	}
 }
@@ -292,7 +291,6 @@ func (g *game) sendAccept(conn net.Conn, action lurk.MessageType) error {
 	if err != nil {
 		return err
 	}
-
 	_, err = conn.Write(ba)
 	return err
 }

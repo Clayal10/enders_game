@@ -59,6 +59,7 @@ const (
 	characterLength  = 48
 	connectionLength = 37
 	versionLength    = 5
+	gameLength       = 7
 )
 
 // Exported character flags
@@ -113,6 +114,9 @@ func GetVariableLength(data []byte) (int, error) {
 	case TypeVersion:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
 		return msgLength + versionLength, nil
+	case TypeGame:
+		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
+		return msgLength + gameLength, nil
 	default:
 		return -1, nil
 	}

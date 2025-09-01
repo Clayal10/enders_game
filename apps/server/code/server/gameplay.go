@@ -72,6 +72,9 @@ func (g *game) handleLoot(loot *lurk.Loot, conn net.Conn) {
 func (g *game) handleCharacter(char *lurk.Character, conn net.Conn) {
 
 }
-func (g *game) handleLeave(conn net.Conn) {
-
+func (g *game) handleLeave(player string, conn net.Conn) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.users[player] = nil
+	_ = g.sendAccept(conn, lurk.TypeLeave) // don't need it to work if they are exiting.
 }
