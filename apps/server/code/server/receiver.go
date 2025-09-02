@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/Clayal10/enders_game/lib/cross"
 	"github.com/Clayal10/enders_game/lib/lurk"
@@ -20,17 +21,15 @@ type receiver struct {
 
 const (
 	bufferLength = 128 // Should cover most messages.
-	minBuffer    = 48  // type Character's variable length field is at offset 46.
 )
+
+var terminationTimeout = 2 * time.Second
 
 func newReceiver(cfg *ServerConfig, game *game) (*receiver, error) {
 	address := fmt.Sprintf("localhost:%v", cfg.Port)
 
-	tcpAddr, err := net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		log.Printf("Could not resolve address '%v'", address)
-		return nil, err
-	}
+	// Won't fail with the preset localhost and "tcp".
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", address)
 
 	l, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
@@ -82,6 +81,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		return
 	}
 	log.Printf("User left.")
+	time.Sleep(terminationTimeout)
 }
 
 func (rec *receiver) stop() {
@@ -132,19 +132,3 @@ func readSingleMessage(conn net.Conn) ([]byte, int, error) {
 	buffer = append(buffer, b...)
 	return buffer, n + bytesNeeded, nil
 }
-
-/*
-func flush(conn net.Conn) error {
-	buf := make([]byte, 1024)
-	for {
-		_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond))
-		_, err := conn.Read(buf)
-		if err != nil {
-			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				break
-			}
-		}
-	}
-	return nil
-}
-*/

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -41,19 +40,33 @@ func newGame() *game {
 }
 
 func (g *game) sendStart(conn net.Conn) error {
-	gameMessage := lurk.Game{
+	version := &lurk.Version{
+		Type:  lurk.TypeVersion,
+		Major: 2,
+		Minor: 3,
+	}
+
+	gameMessage := &lurk.Game{
 		Type:          lurk.TypeGame,
 		InitialPoints: initialPoints,
 		StatLimit:     initialPoints,
 		GameDesc:      gameDescription,
 	}
 
-	msg, err := lurk.Marshal(&gameMessage)
+	ba, err := lurk.Marshal(version)
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Write(msg)
+	if _, err = conn.Write(ba); err != nil {
+		return err
+	}
+
+	if ba, err = lurk.Marshal(gameMessage); err != nil {
+		return err
+	}
+
+	_, err = conn.Write(ba)
 	return err
 }
 
@@ -90,18 +103,12 @@ func (g *game) registerPlayer(conn net.Conn) (string, error) {
 }
 
 func (g *game) addUser(conn net.Conn) (characterID string, err error) {
-
 	// In this loop, we get the character and send it back after checking the validity of it.
 	for {
 		buffer, n, err := readSingleMessage(conn) // accept CHARACTER
 		if err != nil {
-			if !errors.Is(err, cross.ErrInvalidMessageType) {
-				return "", err
-			}
-			if err := g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
-				return "", err
-			}
-			continue
+			_ = g.sendError(conn, cross.Other, "Bad message, terminating connection.")
+			return "", err
 		}
 
 		msg, err := lurk.Unmarshal(buffer[:n])
@@ -186,21 +193,14 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 
 		buffer, n, err := readSingleMessage(conn) // accept MESSAGE || CHARACTER || LEAVE
 		if err != nil {
-			if !errors.Is(err, cross.ErrInvalidMessageType) {
-				return err
-			}
-			if err := g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
-				return err
-			}
-			continue
+			_ = g.sendError(conn, cross.Other, "Bad message, try again.")
+			return err
 		}
 
 		lm, err := lurk.Unmarshal(buffer[:n])
 		if err != nil {
-			if err := g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
-				return err
-			}
-			continue
+			_ = g.sendError(conn, cross.Other, "Bad message, try again.")
+			return err
 		}
 
 		if ok := g.messageSelection(lm, player, conn); ok {

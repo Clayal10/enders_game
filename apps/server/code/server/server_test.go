@@ -18,13 +18,10 @@ import (
 // Global byte buffer for log checking.
 var buf bytes.Buffer
 
-func TestMain(m *testing.M) {
-	log.SetOutput(&buf)
-	m.Run()
-}
-
 func TestServerFunctionality(t *testing.T) {
 	a := assert.New(t)
+
+	log.SetOutput(&buf)
 
 	port := cross.GetFreePort()
 	cfg := &ServerConfig{
@@ -39,30 +36,36 @@ func TestServerFunctionality(t *testing.T) {
 		}
 	}()
 
-	// This one doesn't leave.
-	t.Run("TestGameStart", func(_ *testing.T) {
-		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", port))
-		a.NoError(err)
-
-		buffer := make([]byte, 1024)
-
-		n, err := conn.Read(buffer)
-		a.NoError(err)
-
-		msg, err := lurk.Unmarshal(buffer[:n])
-		a.NoError(err)
-
-		a.True(msg.GetType() == lurk.TypeGame)
-
+	t.Run("TestInvalidCharacterStats", func(_ *testing.T) {
 		char := &lurk.Character{
 			Type:       lurk.TypeCharacter,
-			Name:       "Clay",
+			Name:       "Invalid guy",
 			Attack:     100,
+			Health:     100,
 			Defense:    90,
 			Regen:      80,
 			RoomNum:    2,
 			PlayerDesc: "A guy who is just programming a game server",
 		}
+
+		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
+		a.NoError(err)
+
+		buffer, n, err := readSingleMessage(conn)
+		a.NoError(err)
+
+		msg, err := lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeVersion)
+
+		buffer, n, err = readSingleMessage(conn)
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeGame)
 
 		ba, err := lurk.Marshal(char)
 		a.NoError(err)
@@ -70,63 +73,16 @@ func TestServerFunctionality(t *testing.T) {
 		_, err = conn.Write(ba) // send character
 		a.NoError(err)
 
-		acceptBuffer := buffer[:2]       // keep reusing the buffer
-		n, err = conn.Read(acceptBuffer) // read accept
+		buffer, _, err = readSingleMessage(conn) // read error
 		a.NoError(err)
 
-		msg, err = lurk.Unmarshal(buffer[:n])
+		msg, err = lurk.Unmarshal(buffer)
 		a.NoError(err)
 
-		a.True(msg.GetType() == lurk.TypeAccept)
-		n, err = conn.Read(buffer)
-		a.NoError(err)
-
-		msg, err = lurk.Unmarshal(buffer[:n])
-		a.NoError(err)
-
-		a.True(msg.GetType() == lurk.TypeCharacter)
-	})
-	t.Run("TestInvalidCharacterStats", func(_ *testing.T) {
-		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", port))
-		a.NoError(err)
-
-		buffer := make([]byte, 1024)
-
-		n, err := conn.Read(buffer)
-		a.NoError(err)
-
-		msg, err := lurk.Unmarshal(buffer[:n])
-		a.NoError(err)
-
-		a.True(msg.GetType() == lurk.TypeGame)
-
-		char := &lurk.Character{
-			Type:       lurk.TypeCharacter,
-			Name:       "Clay",
-			Attack:     100,
-			Health:     100,
-			Defense:    90,
-			Regen:      80,
-			RoomNum:    2,
-			PlayerDesc: "A guy who is just programming a game server with stats that I'm not supposed to put in the character",
-		}
-
-		ba, err := lurk.Marshal(char)
-		a.NoError(err)
-
-		_, err = conn.Write(ba)
-		a.NoError(err)
-
-		n, err = conn.Read(buffer)
-		a.NoError(err)
-
-		msg, err = lurk.Unmarshal(buffer[:n])
-		a.NoError(err)
-
-		a.True(msg.GetType() == lurk.TypeError)
 		e, ok := msg.(*lurk.Error)
 		a.True(ok)
-		a.True(e.ErrCode == cross.StatError)
+
+		a.True(strings.Contains(e.ErrMessage, "has invalid stats"))
 	})
 	t.Run("TestBasicGameplay", func(_ *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
@@ -189,7 +145,7 @@ func TestServerFunctionality(t *testing.T) {
 		_, err = conn2.Write(ba)
 		a.NoError(err)
 
-		errMessage := readUntill(a, lurk.TypeError, conn2)
+		errMessage := readUntil(a, lurk.TypeError, conn2)
 
 		a.True(errMessage != nil)
 		a.True(errMessage.GetType() == lurk.TypeError)
@@ -225,6 +181,14 @@ func TestServerFunctionality(t *testing.T) {
 		msg, err := lurk.Unmarshal(buffer[:n])
 		a.NoError(err)
 
+		a.True(msg.GetType() == lurk.TypeVersion)
+
+		buffer, n, err = readSingleMessage(conn)
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
 		a.True(msg.GetType() == lurk.TypeGame)
 
 		ba, err := lurk.Marshal(char)
@@ -235,49 +199,41 @@ func TestServerFunctionality(t *testing.T) {
 		_, err = conn.Write(ba) // send character with bad type.
 		a.NoError(err)
 
-		time.Sleep(50 * time.Millisecond)
-
-		errMessage := readUntill(a, lurk.TypeError, conn)
+		errMessage := readUntil(a, lurk.TypeError, conn)
 		a.True(errMessage != nil)
 		a.True(errMessage.GetType() == lurk.TypeError)
 		e, ok := errMessage.(*lurk.Error)
 		a.True(ok)
-		a.True(strings.Contains(e.ErrMessage, "Bad message, try again"))
-
-		ba[0] = 10
-
-		_, err = conn.Write(ba) // send character with good type now.
-		a.NoError(err)
-
-		msg = readUntill(a, lurk.TypeAccept, conn)
-
-		a.True(msg.GetType() == lurk.TypeAccept)
-		buffer, n, err = readSingleMessage(conn)
-		a.NoError(err)
-
-		msg, err = lurk.Unmarshal(buffer[:n])
-		a.NoError(err)
-
-		a.True(msg.GetType() == lurk.TypeCharacter)
-
-		ba, err = lurk.Marshal(&lurk.Start{
-			Type: lurk.TypeStart,
-		})
-		a.NoError(err)
-
-		_, err = conn.Write(ba)
-		a.NoError(err)
-
-		buffer, _, err = readSingleMessage(conn)
-		a.NoError(err)
-
-		a.True(buffer[0] == byte(lurk.TypeAccept))
+		a.True(strings.Contains(e.ErrMessage, "Bad message"))
 
 	})
 }
 
-func readUntill(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMessage {
-	//_ = conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+func TestServerStartupErrors(t *testing.T) {
+	a := assert.New(t)
+
+	log.SetOutput(&buf)
+	t.Run("TestBadIPandPort", func(_ *testing.T) {
+		port := cross.GetFreePort()
+		cfg := &ServerConfig{
+			Port: port,
+		}
+
+		cfs, err := New(cfg)
+		a.NoError(err)
+
+		_, err = New(cfg)
+		a.Error(err)
+		a.True(strings.Contains(buf.String(), "Could not listen on port"))
+
+		for _, cf := range cfs {
+			cf()
+		}
+	})
+}
+
+func readUntil(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMessage {
+	_ = conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
 	for {
 		buffer, _, err := readSingleMessage(conn)
 		if err != nil {
@@ -291,7 +247,6 @@ func readUntill(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMe
 		a.NoError(err)
 
 		mt := msg.GetType()
-		fmt.Println(mt)
 		if mt == t {
 			return msg
 		}
@@ -306,6 +261,14 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 	a.NoError(err)
 
 	msg, err := lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeVersion)
+
+	buffer, n, err = readSingleMessage(conn)
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
 	a.NoError(err)
 
 	a.True(msg.GetType() == lurk.TypeGame)
