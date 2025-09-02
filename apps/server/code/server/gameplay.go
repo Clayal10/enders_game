@@ -54,27 +54,16 @@ func (g *game) createMonsters() {
 	}
 }
 
-func (g *game) handleMessage(msg *lurk.Message, conn net.Conn) {
-
-}
-func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn) {
-
-}
-func (g *game) handleFight(conn net.Conn) {
-
-}
-func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn) {
-
-}
-func (g *game) handleLoot(loot *lurk.Loot, conn net.Conn) {
-
-}
-func (g *game) handleCharacter(char *lurk.Character, conn net.Conn) {
-
-}
-func (g *game) handleLeave(player string, conn net.Conn) {
+func (g *game) handleMessage(msg *lurk.Message, conn net.Conn)              {}
+func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn) {}
+func (g *game) handleFight(conn net.Conn)                                   {}
+func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn)            {}
+func (g *game) handleLoot(loot *lurk.Loot, conn net.Conn)                   {}
+func (g *game) handleCharacter(char *lurk.Character, conn net.Conn)         {}
+func (g *game) handleLeave(player string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	g.users[player] = nil
-	_ = g.sendAccept(conn, lurk.TypeLeave) // don't need it to work if they are exiting.
+	delete(g.users, player)
+	// Maybe send an [ACCEPT] message?
+	// Maybe leave a body? turn it into a monster?
 }

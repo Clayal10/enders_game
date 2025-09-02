@@ -80,7 +80,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		log.Printf("%v: error during gameplay", err.Error())
 		return
 	}
-
+	log.Printf("User left.")
 }
 
 func (rec *receiver) stop() {

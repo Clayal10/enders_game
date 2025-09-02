@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -149,13 +150,10 @@ func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
 		ErrCode:    code,
 		ErrMessage: msg,
 	})
-	if err != nil {
-		return err
+	if err == nil {
+		_, err = conn.Write(ba)
 	}
-	if _, err = conn.Write(ba); err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
@@ -176,75 +174,79 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	}
 
 	for {
-		buffer, n, err := readAll(conn) // accept MESSAGE || CHARACTER || LEAVE
-		if err != nil {
-			if err = g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
-				return err
-			}
-			return err
+		if _, ok := g.users[player]; !ok { // User has been removed.
+			return nil
 		}
 
-		lm, err := lurk.Unmarshal(buffer[:n])
+		buffer, n, err := readAll(conn) // accept MESSAGE || CHARACTER || LEAVE
 		if err != nil {
-			if err = g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
+			if !errors.Is(err, cross.ErrInvalidMessageType) {
+				return err
+			}
+			if err := g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
 				return err
 			}
 			continue
 		}
 
-		// Not calling 'continue' since this is the last thing in the logic loop.
-		switch lm.GetType() {
-		case lurk.TypeMessage:
-			msg, ok := lm.(*lurk.Message)
-			if !ok {
-				err = g.sendError(conn, cross.Other, fmt.Sprintf("Message had type %v, but had invalid fields.", lurk.TypeMessage))
-				if err != nil {
-					return err
-				}
+		lm, err := lurk.Unmarshal(buffer[:n])
+		if err != nil {
+			if err := g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
+				return err
 			}
-			g.handleMessage(msg, conn)
-		case lurk.TypeChangeRoom:
-			msg, ok := lm.(*lurk.ChangeRoom)
-			if !ok {
-				err = g.sendError(conn, cross.Other, fmt.Sprintf("Message had type %v, but had invalid fields.", lurk.TypeChangeRoom))
-				if err != nil {
-					return err
-				}
-			}
-			g.handleChangeRoom(msg, conn)
-		case lurk.TypeFight:
-			g.handleFight(conn)
-		case lurk.TypePVPFight:
-			msg, ok := lm.(*lurk.PVPFight)
-			if !ok {
-				err = g.sendError(conn, cross.Other, fmt.Sprintf("Message had type %v, but had invalid fields.", lurk.TypePVPFight))
-				if err != nil {
-					return err
-				}
-			}
-			g.handlePVPFight(msg, conn)
-		case lurk.TypeLoot:
-			msg, ok := lm.(*lurk.Loot)
-			if !ok {
-				err = g.sendError(conn, cross.Other, fmt.Sprintf("Message had type %v, but had invalid fields.", lurk.TypeLoot))
-				if err != nil {
-					return err
-				}
-			}
-			g.handleLoot(msg, conn)
-		case lurk.TypeCharacter:
-			msg, ok := lm.(*lurk.Character)
-			if !ok {
-				err = g.sendError(conn, cross.Other, fmt.Sprintf("Message had type %v, but had invalid fields.", lurk.TypeCharacter))
-				if err != nil {
-					return err
-				}
-			}
-			g.handleCharacter(msg, conn)
-		case lurk.TypeLeave:
-			g.handleLeave(player, conn)
+			continue
+		}
+
+		if ok := g.messageSelection(lm, player, conn); ok {
+			continue
+		}
+		// The message did not have proper fields for the message type.
+		if err = g.sendError(conn, cross.Other, fmt.Sprintf("Message contains invalid fields for type %d", lm.GetType())); err != nil {
+			return err
 		}
 	}
+}
+
+func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) bool {
+	switch lm.GetType() {
+	case lurk.TypeMessage:
+		msg, ok := lm.(*lurk.Message)
+		if !ok {
+			return ok
+		}
+		g.handleMessage(msg, conn)
+	case lurk.TypeChangeRoom:
+		msg, ok := lm.(*lurk.ChangeRoom)
+		if !ok {
+			return ok
+		}
+		g.handleChangeRoom(msg, conn)
+	case lurk.TypeFight:
+		g.handleFight(conn)
+	case lurk.TypePVPFight:
+		msg, ok := lm.(*lurk.PVPFight)
+		if !ok {
+			return ok
+		}
+		g.handlePVPFight(msg, conn)
+	case lurk.TypeLoot:
+		msg, ok := lm.(*lurk.Loot)
+		if !ok {
+			return ok
+		}
+		g.handleLoot(msg, conn)
+	case lurk.TypeCharacter:
+		msg, ok := lm.(*lurk.Character)
+		if !ok {
+			return ok
+		}
+		g.handleCharacter(msg, conn)
+	case lurk.TypeLeave:
+		g.handleLeave(player)
+	default:
+		return false
+	}
+	return true
 }
 
 func (g *game) sendRoom(room *lurk.Room, player string, conn net.Conn) error {

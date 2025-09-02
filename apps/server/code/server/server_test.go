@@ -1,8 +1,12 @@
 package server
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"log"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,8 +15,17 @@ import (
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
+// Global byte buffer for log checking.
+var buf bytes.Buffer
+
+func TestMain(m *testing.M) {
+	log.SetOutput(&buf)
+	m.Run()
+}
+
 func TestServerFunctionality(t *testing.T) {
 	a := assert.New(t)
+
 	port := cross.GetFreePort()
 	cfg := &ServerConfig{
 		Port: port,
@@ -126,6 +139,16 @@ func TestServerFunctionality(t *testing.T) {
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
+		conn2 := startClientConnection(a, cfg, &lurk.Character{
+			Type:       lurk.TypeCharacter,
+			Name:       "Tester 2",
+			Attack:     100,
+			Defense:    90,
+			Regen:      80,
+			RoomNum:    2,
+			PlayerDesc: "A guy who is just programming a game server",
+		})
+
 		buffer, _, err := readAll(conn) // read the 'room'
 		a.NoError(err)
 
@@ -145,9 +168,56 @@ func TestServerFunctionality(t *testing.T) {
 
 		time.Sleep(50 * time.Millisecond)
 
-		//buffer, _, err = readAll(conn)
-		//a.NoError(err)
-		//a.True(buffer[0] == byte(lurk.TypeAccept))
+		a.True(strings.Contains(buf.String(), "User left."))
+
+		buffer, _, err = readAll(conn2)
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer)
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeRoom)
+
+		// Send invalid stuff to server.
+		ba, err = lurk.Marshal(&lurk.Accept{
+			Type:   lurk.TypeAccept,
+			Action: lurk.TypeAccept,
+		})
+		a.NoError(err)
+
+		_, err = conn2.Write(ba)
+		a.NoError(err)
+
+		_ = func() lurk.LurkMessage {
+			conn2.SetDeadline(time.Now().Add(500 * time.Millisecond))
+			for {
+				// TODO fix the read operation from returning 1 byte of 0??
+				buffer, _, err = readAll(conn2)
+				if err != nil {
+					if errors.Is(err, cross.ErrInvalidMessageType) {
+						continue
+					}
+					return nil
+				}
+
+				msg, err = lurk.Unmarshal(buffer)
+				a.NoError(err)
+
+				fmt.Println(msg.GetType())
+				if msg.GetType() == lurk.TypeError {
+					return msg
+				}
+			}
+		}()
+
+		//a.True(errMessage != nil)
+		/*
+			a.True(errMessage.GetType() == lurk.TypeError)
+			e, ok := errMessage.(*lurk.Error)
+			a.True(ok)
+			a.True(strings.Contains(e.ErrMessage, "Message contains invalid fields"))
+		*/
+
 	})
 }
 
