@@ -279,13 +279,6 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 	_, err = conn.Write(ba) // send character
 	a.NoError(err)
 
-	buffer, n, err = readSingleMessage(conn) // read accept
-	a.NoError(err)
-
-	msg, err = lurk.Unmarshal(buffer[:n])
-	a.NoError(err)
-
-	a.True(msg.GetType() == lurk.TypeAccept)
 	buffer, n, err = readSingleMessage(conn)
 	a.NoError(err)
 
@@ -293,6 +286,14 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 	a.NoError(err)
 
 	a.True(msg.GetType() == lurk.TypeCharacter)
+
+	buffer, n, err = readSingleMessage(conn) // read accept
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeAccept)
 
 	ba, err = lurk.Marshal(&lurk.Start{
 		Type: lurk.TypeStart,
