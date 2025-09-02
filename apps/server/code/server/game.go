@@ -93,9 +93,15 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 
 	// In this loop, we get the character and send it back after checking the validity of it.
 	for {
-		buffer, n, err := readAll(conn) // accept CHARACTER
+		buffer, n, err := readSingleMessage(conn) // accept CHARACTER
 		if err != nil {
-			return "", err
+			if !errors.Is(err, cross.ErrInvalidMessageType) {
+				return "", err
+			}
+			if err := g.sendError(conn, cross.Other, "Bad message, try again."); err != nil {
+				return "", err
+			}
+			continue
 		}
 
 		msg, err := lurk.Unmarshal(buffer[:n])
@@ -178,7 +184,7 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 			return nil
 		}
 
-		buffer, n, err := readAll(conn) // accept MESSAGE || CHARACTER || LEAVE
+		buffer, n, err := readSingleMessage(conn) // accept MESSAGE || CHARACTER || LEAVE
 		if err != nil {
 			if !errors.Is(err, cross.ErrInvalidMessageType) {
 				return err
@@ -295,45 +301,4 @@ func (g *game) sendAccept(conn net.Conn, action lurk.MessageType) error {
 	}
 	_, err = conn.Write(ba)
 	return err
-}
-
-// We want to read exactly the length of the message. This function will do up to 3
-// calls to 'Read' to read exactly one message.
-func readAll(conn net.Conn) ([]byte, int, error) {
-	buffer := make([]byte, 1)
-	_, err := conn.Read(buffer)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	bytesNeeded, ok := lurk.LengthOffset[lurk.MessageType(buffer[0])]
-	if !ok {
-		return nil, 0, cross.ErrInvalidMessageType
-	}
-
-	if bytesNeeded == 1 {
-		return buffer, 1, nil
-	}
-
-	b := make([]byte, bytesNeeded-1)
-	if _, err = conn.Read(b); err != nil {
-		return nil, 0, err
-	}
-	buffer = append(buffer, b...)
-
-	n, err := lurk.GetVariableLength(buffer)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if n == -1 {
-		return buffer, bytesNeeded, nil
-	}
-
-	b = make([]byte, n)
-	if _, err = conn.Read(b); err != nil {
-		return nil, 0, err
-	}
-	buffer = append(buffer, b...)
-	return buffer, n, nil
 }

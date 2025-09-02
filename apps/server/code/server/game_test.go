@@ -48,7 +48,7 @@ func TestReadAll(t *testing.T) {
 		conn, err := l.Accept()
 		a.NoError(err)
 
-		buffer, n, err := readAll(conn)
+		buffer, n, err := readSingleMessage(conn)
 		a.NoError(err)
 		a.True(n > bufferLength)
 

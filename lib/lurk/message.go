@@ -98,25 +98,25 @@ func GetVariableLength(data []byte) (int, error) {
 	switch msgType {
 	case TypeMessage:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
-		return msgLength + messageLength, nil
+		return msgLength, nil
 	case TypeError:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
-		return msgLength + errorLength, nil
+		return msgLength, nil
 	case TypeRoom:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
-		return msgLength + roomLength, nil
+		return msgLength, nil
 	case TypeCharacter:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
-		return msgLength + characterLength, nil
+		return msgLength, nil
 	case TypeConnection:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
-		return msgLength + connectionLength, nil
+		return msgLength, nil
 	case TypeVersion:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
-		return msgLength + versionLength, nil
+		return msgLength, nil
 	case TypeGame:
 		msgLength := int(binary.LittleEndian.Uint16(data[idx-2:]))
-		return msgLength + gameLength, nil
+		return msgLength, nil
 	default:
 		return -1, nil
 	}

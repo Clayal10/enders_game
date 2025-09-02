@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/Clayal10/enders_game/lib/cross"
+	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
 type receiver struct {
@@ -88,3 +89,62 @@ func (rec *receiver) stop() {
 	defer rec.mu.Unlock()
 	rec.shouldRun = false
 }
+
+// We want to read exactly the length of the message. This function will do up to 3
+// calls to 'Read' to read exactly one message.
+func readSingleMessage(conn net.Conn) ([]byte, int, error) {
+	// TODO find a way to flush out after an error
+	buffer := make([]byte, 1)
+	_, err := conn.Read(buffer)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	bytesNeeded, ok := lurk.LengthOffset[lurk.MessageType(buffer[0])]
+	if !ok {
+		return nil, 0, cross.ErrInvalidMessageType
+	}
+
+	if bytesNeeded == 1 {
+		return buffer, 1, nil
+	}
+
+	b := make([]byte, bytesNeeded-1)
+	_, err = conn.Read(b)
+	if err != nil {
+		return nil, 0, err
+	}
+	buffer = append(buffer, b...)
+
+	n, err := lurk.GetVariableLength(buffer)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if n == -1 {
+		return buffer, bytesNeeded, nil
+	}
+
+	b = make([]byte, n)
+	if _, err = conn.Read(b); err != nil {
+		return nil, 0, err
+	}
+	buffer = append(buffer, b...)
+	return buffer, n + bytesNeeded, nil
+}
+
+/*
+func flush(conn net.Conn) error {
+	buf := make([]byte, 1024)
+	for {
+		_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond))
+		_, err := conn.Read(buf)
+		if err != nil {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				break
+			}
+		}
+	}
+	return nil
+}
+*/
