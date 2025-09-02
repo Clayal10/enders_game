@@ -132,10 +132,6 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 			continue
 		}
 
-		if err = g.sendAccept(conn, lurk.TypeCharacter); err != nil { // accepted CHARACTER
-			return "", err
-		}
-
 		// Character is good at this point, flip flag and wait for their start.
 		character.Flags[lurk.Ready] = true
 		character.RoomNum = battleSchool
@@ -149,6 +145,10 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 		}
 
 		if _, err = conn.Write(ba); err != nil {
+			return "", err
+		}
+
+		if err = g.sendAccept(conn, lurk.TypeCharacter); err != nil { // accepted CHARACTER
 			return "", err
 		}
 
