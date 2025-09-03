@@ -8,6 +8,7 @@ var (
 	ErrFrameTooSmall      = errors.New("frame too small")
 	ErrInvalidMessageType = errors.New("invalid message type")
 	ErrInvalidErrCode     = errors.New("invalid error code")
+	ErrNoVariableLength   = errors.New("message does not contain a variable length field")
 )
 
 type ErrCode byte
@@ -22,4 +23,5 @@ const (
 	NoTarget            ErrCode = 6
 	NoFight             ErrCode = 7
 	NoPVP               ErrCode = 8
+	NoError             ErrCode = 255
 )
