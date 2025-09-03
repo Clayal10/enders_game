@@ -40,8 +40,7 @@ func TestServerFunctionality(t *testing.T) {
 		char := &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Invalid guy",
-			Attack:     100,
-			Health:     100,
+			Attack:     1000,
 			Defense:    90,
 			Regen:      80,
 			RoomNum:    2,
@@ -88,7 +87,7 @@ func TestServerFunctionality(t *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester",
-			Attack:     100,
+			Attack:     99,
 			Defense:    90,
 			Regen:      80,
 			RoomNum:    2,
@@ -98,7 +97,7 @@ func TestServerFunctionality(t *testing.T) {
 		conn2 := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester 2",
-			Attack:     100,
+			Attack:     99,
 			Defense:    90,
 			Regen:      80,
 			RoomNum:    2,

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	defaultPort     = 34567
+	defaultPort     = 5174
 	defaultFilePath = "./Config.json"
 )
 

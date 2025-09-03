@@ -17,6 +17,8 @@ type game struct {
 	// key is room number. Need to be careful about multithreading this
 	rooms map[uint16]*lurk.Room
 
+	game *lurk.Game
+
 	mu sync.Mutex
 }
 
@@ -46,7 +48,7 @@ func (g *game) sendStart(conn net.Conn) error {
 		Minor: 3,
 	}
 
-	gameMessage := &lurk.Game{
+	g.game = &lurk.Game{
 		Type:          lurk.TypeGame,
 		InitialPoints: initialPoints,
 		StatLimit:     initialPoints,
@@ -62,7 +64,7 @@ func (g *game) sendStart(conn net.Conn) error {
 		return err
 	}
 
-	if ba, err = lurk.Marshal(gameMessage); err != nil {
+	if ba, err = lurk.Marshal(g.game); err != nil {
 		return err
 	}
 
@@ -73,29 +75,30 @@ func (g *game) sendStart(conn net.Conn) error {
 func (g *game) registerPlayer(conn net.Conn) (string, error) {
 	id, err := g.addUser(conn)
 	if err != nil {
-		return "", err
+		return id, err
 	}
+	fmt.Println("Added user ", id)
 
 	buffer := make([]byte, bufferLength)
 
 	for {
 		n, err := conn.Read(buffer) // accept START
 		if err != nil {
-			return "", err
+			return id, err
 		}
 
 		msg, err := lurk.Unmarshal(buffer[:n])
 		if err != nil {
-			return "", err
+			return id, err
 		}
 		if msg.GetType() == lurk.TypeStart {
 			if err = g.sendAccept(conn, lurk.TypeStart); err != nil { // accepted START
-				return "", err
+				return id, err
 			}
 			break
 		}
 		if err = g.sendError(conn, cross.NotReady, "Please send a [START] message"); err != nil {
-			return "", err
+			return id, err
 		}
 	}
 
@@ -108,17 +111,18 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 		buffer, n, err := readSingleMessage(conn) // accept CHARACTER
 		if err != nil {
 			_ = g.sendError(conn, cross.Other, "Bad message, terminating connection.")
-			return "", err
+			return characterID, err
 		}
 
 		msg, err := lurk.Unmarshal(buffer[:n])
 		if err != nil {
-			return "", err
+			return characterID, err
 		}
 		if msg.GetType() != lurk.TypeCharacter {
 			if err := g.sendError(conn, cross.Other, "You must send a [CHARACTER] type."); err != nil {
-				return "", err
+				return characterID, err
 			}
+			fmt.Println("Not type character")
 			continue
 		}
 
@@ -126,12 +130,11 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 		character := msg.(*lurk.Character)
 		if e := g.validateCharacter(character); e != cross.NoError {
 			g.mu.Unlock()
-			if err := g.sendError(conn, e, "Your [CHARACTER] has invalid stats."); err != nil {
-				return "", err
+			if err := g.sendError(conn, e, "Your [CHARACTER] has invalid stats"); err != nil {
+				return characterID, err
 			}
 			continue
 		}
-
 		// Character is good at this point, flip flag and wait for their start.
 		character.Flags[lurk.Ready] = true
 		character.RoomNum = battleSchool
@@ -141,15 +144,15 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 
 		ba, err := lurk.Marshal(character)
 		if err != nil {
-			return "", err
+			return characterID, err
 		}
 
 		if _, err = conn.Write(ba); err != nil {
-			return "", err
+			return characterID, err
 		}
 
 		if err = g.sendAccept(conn, lurk.TypeCharacter); err != nil { // accepted CHARACTER
-			return "", err
+			return characterID, err
 		}
 
 		break
@@ -170,9 +173,12 @@ func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
 }
 
 func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
-	if c.Gold != 0 || c.Health != 0 {
+	if c.Attack >= g.game.StatLimit ||
+		c.Defense >= g.game.StatLimit ||
+		c.Regen >= g.game.StatLimit {
 		return cross.StatError
 	}
+
 	if _, ok := g.users[c.Name]; ok {
 		return cross.PlayerAlreadyExists
 	}
