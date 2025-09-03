@@ -70,7 +70,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 	}
 
 	player, err := rec.registerPlayer(conn)
-	defer delete(rec.game.users, player)
+	defer delete(rec.users, player)
 	if err != nil {
 		log.Printf("%v: error registering player", err.Error())
 		return
@@ -82,7 +82,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		return
 	}
 	log.Printf("User left.")
-	delete(rec.game.users, player)
+	delete(rec.users, player)
 	time.Sleep(terminationTimeout)
 }
 
