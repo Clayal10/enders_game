@@ -2,14 +2,22 @@
 
 set -e
 
-read -p "Kill active server? (y/n): " option
-
-if [[ "$option" == "y" || "$option" == "Y" ]]; then
+stop_server () {
     echo "Killing active server"
-    pid=$(ps | grep enders_game | grep -o '[0-9]\+ ' | head -n 1)
+    pid=$(ps axu | grep ./enders_game | head -n 1 | grep -oP '^\S+\s+\K\S+')
     kill "$pid"
     rm -r ./bin
+}
+
+read -p "Start/Restart (1) or Terminate (2)?: " option
+
+if [ "$option" == "2" ]; then
+    stop_server
     exit
+fi
+
+if [ -d "./bin" ]; then
+    stop_server
 fi
 
 mkdir bin

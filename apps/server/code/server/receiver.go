@@ -26,7 +26,7 @@ const (
 var terminationTimeout = 2 * time.Second
 
 func newReceiver(cfg *ServerConfig, game *game) (*receiver, error) {
-	address := fmt.Sprintf("localhost:%v", cfg.Port)
+	address := fmt.Sprintf("0.0.0.0:%v", cfg.Port)
 
 	// Won't fail with the preset localhost and "tcp".
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", address)
