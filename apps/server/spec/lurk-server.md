@@ -12,7 +12,7 @@ For custom configuration options, a `Config.json` file may be present in the dir
 
 ```json
 {
-    "ServerPort": 34567
+    "ServerPort": 5069
 }
 ```
 
