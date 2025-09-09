@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sync"
 
@@ -11,15 +12,27 @@ import (
 
 type game struct {
 	// key is name, should be unique.
-	users map[string]*lurk.Character
+	users map[string]*user
 	// key is name? monster is a generic name for an npc
 	monsters map[string]*lurk.Character
 	// key is room number. Need to be careful about multithreading this
-	rooms map[uint16]*lurk.Room
+	rooms map[uint16]*room
 
 	game *lurk.Game
 
 	mu sync.Mutex
+}
+
+type user struct {
+	c    *lurk.Character
+	conn net.Conn
+	// Key is room number. For conditional rooms. Users won't be able to see or access these rooms until true.
+	allowedRoom map[uint16]bool
+}
+
+type room struct {
+	r           *lurk.Room
+	connections []*lurk.Connection
 }
 
 // default game values.
@@ -30,9 +43,9 @@ const (
 // when creating a new game, we need to initialize the rooms and all entities.
 func newGame() *game {
 	g := &game{
-		users:    make(map[string]*lurk.Character),
+		users:    make(map[string]*user),
 		monsters: make(map[string]*lurk.Character),
-		rooms:    make(map[uint16]*lurk.Room),
+		rooms:    make(map[uint16]*room),
 	}
 
 	g.createRooms()
@@ -77,17 +90,14 @@ func (g *game) registerPlayer(conn net.Conn) (string, error) {
 	if err != nil {
 		return id, err
 	}
-	fmt.Println("Added user ", id)
-
-	buffer := make([]byte, bufferLength)
+	log.Printf("Added user %v", id)
 
 	for {
-		n, err := conn.Read(buffer) // accept START
+		buffer, _, err := readSingleMessage(conn) // accept START
 		if err != nil {
 			return id, err
 		}
-
-		msg, err := lurk.Unmarshal(buffer[:n])
+		msg, err := lurk.Unmarshal(buffer)
 		if err != nil {
 			return id, err
 		}
@@ -135,11 +145,8 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 			}
 			continue
 		}
-		// Character is good at this point, flip flag and wait for their start.
-		character.Flags[lurk.Ready] = true
-		character.RoomNum = battleSchool
-		g.users[character.Name] = character
-		characterID = character.Name
+
+		characterID = g.createUser(character, conn)
 		g.mu.Unlock()
 
 		ba, err := lurk.Marshal(character)
@@ -158,6 +165,18 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 		break
 	}
 	return characterID, err
+}
+
+func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
+	// Character is good at this point, flip flag and wait for their start.
+	character.Flags[lurk.Ready] = true
+	character.RoomNum = battleSchool
+	g.users[character.Name] = &user{
+		c:           character,
+		conn:        conn,
+		allowedRoom: make(map[uint16]bool),
+	}
+	return character.Name
 }
 
 func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
@@ -209,7 +228,9 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 			return err
 		}
 
-		if ok := g.messageSelection(lm, player, conn); ok {
+		if err, ok := g.messageSelection(lm, player, conn); err != nil {
+			return err
+		} else if ok {
 			continue
 		}
 		// The message did not have proper fields for the message type.
@@ -219,64 +240,67 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	}
 }
 
-func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) bool {
+func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) (err error, _ bool) {
 	switch lm.GetType() {
 	case lurk.TypeMessage:
 		msg, ok := lm.(*lurk.Message)
 		if !ok {
-			return ok
+			return nil, ok
 		}
-		g.handleMessage(msg, conn)
+		g.handleMessage(msg, player)
 	case lurk.TypeChangeRoom:
 		msg, ok := lm.(*lurk.ChangeRoom)
 		if !ok {
-			return ok
+			return nil, ok
 		}
-		g.handleChangeRoom(msg, conn)
+		err = g.handleChangeRoom(msg, conn, player)
 	case lurk.TypeFight:
-		g.handleFight(conn)
+		msg, ok := lm.(*lurk.Fight)
+		if !ok {
+			return nil, ok
+		}
+		g.handleFight(msg, player)
 	case lurk.TypePVPFight:
 		msg, ok := lm.(*lurk.PVPFight)
 		if !ok {
-			return ok
+			return nil, ok
 		}
-		g.handlePVPFight(msg, conn)
+		g.handlePVPFight(msg, player)
 	case lurk.TypeLoot:
 		msg, ok := lm.(*lurk.Loot)
 		if !ok {
-			return ok
+			return nil, ok
 		}
-		g.handleLoot(msg, conn)
+		g.handleLoot(msg, player)
 	case lurk.TypeCharacter:
 		msg, ok := lm.(*lurk.Character)
 		if !ok {
-			return ok
+			return nil, ok
 		}
-		g.handleCharacter(msg, conn)
+		g.handleCharacter(msg, player)
 	case lurk.TypeLeave:
 		g.handleLeave(player)
 	default:
-		return false
+		return nil, false
 	}
-	return true
+	return err, true
 }
 
-func (g *game) sendRoom(room *lurk.Room, player string, conn net.Conn) error {
-	ba, err := lurk.Marshal(room)
+func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
+	ba, err := lurk.Marshal(room.r)
 	if err != nil {
 		return err
 	}
 	if _, err = conn.Write(ba); err != nil {
 		return err
 	}
-
 	// all characters and monsters in that room
-	for k, v := range g.users {
+	for k, user := range g.users {
 		// should we include current user?
-		if k == player {
+		if k == player || user.c.RoomNum != room.r.RoomNumber {
 			continue
 		}
-		if ba, err = lurk.Marshal(v); err != nil {
+		if ba, err = lurk.Marshal(user.c); err != nil {
 			return err
 		}
 		if _, err = conn.Write(ba); err != nil {
@@ -284,8 +308,20 @@ func (g *game) sendRoom(room *lurk.Room, player string, conn net.Conn) error {
 		}
 	}
 
-	for _, v := range g.monsters {
-		if ba, err = lurk.Marshal(v); err != nil {
+	for _, npc := range g.monsters {
+		if npc.RoomNum != room.r.RoomNumber {
+			continue
+		}
+		if ba, err = lurk.Marshal(npc); err != nil {
+			return err
+		}
+		if _, err = conn.Write(ba); err != nil {
+			return err
+		}
+	}
+
+	for _, connection := range room.connections {
+		if ba, err = lurk.Marshal(connection); err != nil {
 			return err
 		}
 		if _, err = conn.Write(ba); err != nil {

@@ -33,7 +33,7 @@ mv enders_game ../../../bin/
 cd ../../../bin/
 
 echo "Starting Ender's Game Server"
-./enders_game &
+nohup ./enders_game &
 
 echo "Server successfully started"
 exit
