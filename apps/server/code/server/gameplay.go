@@ -18,9 +18,9 @@ const (
 
 The world has been ravaged by the most feared and despised being known to man, the formic. When it comes down to preventing their second massacre, will you be the one to step up and destroy them?`
 	battleSchoolDesc           = "A place where young children play a game. At least, that is what the media says. The reality is that they will manipulate and contort our lives just to see what we can handle."
-	battleSchoolBarracksDesc   = "The room filled with small children, most of them scared, but none of them trying to show their weakness. It looks like the remaining bunk is here at the front, lucky me."
-	battleSchoolGameRoomDesc   = "Many older boys are hunched over the game table, none pay much attention to my entrance."
-	battleSchoolBattleRoomDesc = "A room, 100 cubic meters in size, defying the laws of gravity. With a gate on either side of the room, us children are able to wage war against each other for honor, all the while perfecting zero G movement. "
+	battleSchoolBarracksDesc   = "The room filled with small children, most of them scared, but none of them trying to show their weakness."
+	battleSchoolGameRoomDesc   = "Many older boys are hunched over the game table; smaller children pushed off to the side, watching, waiting."
+	battleSchoolBattleRoomDesc = "A room, 100 cubic meters in size, defying the laws of gravity. With a gate on either side of the room, us children are able to wage war against each other for honor, all the while practicing zero G movement."
 	formicStarSystemDesc       = "Out here in the cold, dark vastness of space, a world filled with billions of alien life forms lay idle."
 	formicHomeWorldDesc        = "In all of the universe, one could not find a more perfect machine working under the surface of this planet. The queen instructs, and the workers follow. Flawlessly. To see this creature is to be in awe and trembling fear at the same time."
 	erosDesc                   = "The secret base for International Fleet Command operations. The surface is blacked out, covered in solar panels. The inhabitants stay below the surface in the smooth tunnels crafted by the formic race many years ago."
@@ -35,11 +35,15 @@ const (
 	colonelGraph = "Colonel Graph"
 	bean         = "Bean"
 	mazer        = "Mazer Rackham"
+	petra        = "Petra Arkanian"
 	// Enemies
 	bonzo       = "Bonito de Madrid"
 	formicFleet = "Formic Fleet"
-	hiveQueen   = "Hive Queen"
 	achilles    = "Achilles de Flandres"
+	peter       = "Peter Wiggin"
+	hiveQueen   = "Hive Queen"
+	// both
+	hiveQueenCacoon = "Hive Queen Cacoon"
 )
 
 // Room Numbers
@@ -214,6 +218,14 @@ func (g *game) createRooms() {
 				RoomName:   "Rotterdam, The Netherlands",
 				RoomDesc:   rotterdamDesc,
 			},
+			connections: []*lurk.Connection{
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: earth,
+					RoomName:   "Earth",
+					RoomDesc:   earthDesc,
+				},
+			},
 		},
 		shakespeare: { // No escape.
 			r: &lurk.Room{
@@ -247,7 +259,7 @@ func (g *game) createMonsters() {
 			Name: bean,
 			Flags: map[string]bool{
 				lurk.Alive:   true,
-				lurk.Monster: true, // Maybe monster?
+				lurk.Monster: true,
 			},
 			Attack:     10,
 			Defense:    200,
@@ -257,12 +269,27 @@ func (g *game) createMonsters() {
 			RoomNum:    battleSchoolBarracks,
 			PlayerDesc: "The littlest one in battle school. You would be mistaken to think that is an indication of his power, though.",
 		},
-		mazer: {
+		petra: {
 			Type: lurk.TypeCharacter,
-			Name: bean,
+			Name: petra,
 			Flags: map[string]bool{
 				lurk.Alive:   true,
-				lurk.Monster: true, // Maybe monster?
+				lurk.Monster: true,
+			},
+			Attack:     10,
+			Defense:    200,
+			Regen:      100,
+			Health:     100,
+			Gold:       0,
+			RoomNum:    battleSchoolBarracks,
+			PlayerDesc: "The only girl in battle school, but don't let that fool you.",
+		},
+		mazer: {
+			Type: lurk.TypeCharacter,
+			Name: mazer,
+			Flags: map[string]bool{
+				lurk.Alive:   true,
+				lurk.Monster: true,
 			},
 			Attack:     100,
 			Defense:    200,
@@ -306,9 +333,8 @@ func (g *game) createMonsters() {
 			Type: lurk.TypeCharacter,
 			Name: hiveQueen,
 			Flags: map[string]bool{
-				lurk.Alive:      true,
-				lurk.Monster:    false, // not a monster, special type.
-				lurk.JoinBattle: true,
+				lurk.Alive:   true,
+				lurk.Monster: true,
 			},
 			Attack:     0,
 			Defense:    0,
@@ -332,6 +358,35 @@ func (g *game) createMonsters() {
 			Gold:       0,
 			RoomNum:    rotterdam,
 			PlayerDesc: "This boy seems to have taken control of the streets. Starving children cling to him as their papa. However, few claim he is must more than that...",
+		},
+		peter: {
+			Type: lurk.TypeCharacter,
+			Name: peter,
+			Flags: map[string]bool{
+				lurk.Alive:   true,
+				lurk.Monster: true,
+			},
+			Attack:     500,
+			Defense:    400,
+			Regen:      50,
+			Health:     1000,
+			Gold:       0,
+			RoomNum:    earth,
+			PlayerDesc: "The boy who will take over the world. Peter will gain control of all those in his grasp, will you be his enemy or foe?",
+		},
+		hiveQueenCacoon: {
+			Type: lurk.TypeCharacter,
+			Name: hiveQueenCacoon,
+			Flags: map[string]bool{
+				lurk.Alive: true,
+			},
+			Attack:     0,
+			Defense:    0,
+			Regen:      0,
+			Health:     1,
+			Gold:       0,
+			RoomNum:    shakespeare,
+			PlayerDesc: "The next hive queen. Will you restore their race?",
 		},
 	}
 }

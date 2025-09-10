@@ -118,7 +118,7 @@ func TestServerFunctionality(t *testing.T) {
 		characters := []*lurk.Character{}
 
 		for {
-			conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
 			buffer, _, err = readSingleMessage(conn)
 			if err != nil {
 				break
@@ -149,7 +149,7 @@ func TestServerFunctionality(t *testing.T) {
 		paths = paths[:0]
 		characters = characters[:0]
 		for {
-			conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
 			buffer, _, err = readSingleMessage(conn)
 			if err != nil {
 				break
