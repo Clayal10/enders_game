@@ -9,6 +9,9 @@ var (
 	ErrInvalidMessageType = errors.New("invalid message type")
 	ErrInvalidErrCode     = errors.New("invalid error code")
 	ErrNoVariableLength   = errors.New("message does not contain a variable length field")
+	ErrUserNotInServer    = errors.New("user does not exist in server")
+	ErrInvalidRoomNumber  = errors.New("room number does not exist")
+	ErrRoomsNotConnected  = errors.New("rooms are not connected")
 )
 
 type ErrCode byte

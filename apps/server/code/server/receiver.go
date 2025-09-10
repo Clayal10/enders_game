@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -18,10 +19,6 @@ type receiver struct {
 	shouldRun bool
 	*game
 }
-
-const (
-	bufferLength = 128 // Should cover most messages.
-)
 
 var terminationTimeout = 2 * time.Second
 
@@ -76,8 +73,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		return
 	}
 
-	if err := rec.startGameplay(player, conn); err != nil {
-		// termination of gameplay
+	if err := rec.startGameplay(player, conn); err != nil && !errors.Is(err, errDisconnect) {
 		log.Printf("%v: error during gameplay", err.Error())
 		return
 	}

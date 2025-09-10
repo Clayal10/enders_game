@@ -12,6 +12,8 @@ import (
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
+const bufferLength = 128
+
 func TestReadAll(t *testing.T) {
 	a := assert.New(t)
 	t.Run("TestExtendedMessage", func(_ *testing.T) {
