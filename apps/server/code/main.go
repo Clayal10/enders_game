@@ -1,9 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -13,20 +10,16 @@ import (
 )
 
 const (
-	defaultPort     = 5069
-	defaultFilePath = "./Config.json"
+	defaultPort = 5069
 )
 
 var (
-	defaultConfig = fmt.Sprintf(`{
-	"ServerPort": %v
-}`, defaultPort)
+	cfg = &server.ServerConfig{
+		Port: defaultPort,
+	}
 )
 
 func main() {
-	cfg, err := getServerConfig(defaultFilePath)
-	fatalOnErr(err)
-
 	cancelFunctions, err := server.New(cfg)
 	fatalOnErr(err)
 
@@ -39,22 +32,6 @@ func main() {
 	for _, cf := range cancelFunctions {
 		cf()
 	}
-}
-
-func getServerConfig(path string) (*server.ServerConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-		data = []byte(defaultConfig)
-	}
-
-	cfg := &server.ServerConfig{}
-	if err = json.Unmarshal(data, cfg); err != nil {
-		return nil, err
-	}
-	return cfg, nil
 }
 
 func fatalOnErr(err error) {

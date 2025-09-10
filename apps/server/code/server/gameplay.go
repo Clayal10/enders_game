@@ -25,6 +25,8 @@ The world has been ravaged by the most feared and despised being known to man, t
 	formicHomeWorldDesc        = "In all of the universe, one could not find a more perfect machine working under the surface of this planet. The queen instructs, and the workers follow. Flawlessly. To see this creature is to be in awe and trembling fear at the same time."
 	erosDesc                   = "The secret base for International Fleet Command operations. The surface is blacked out, covered in solar panels. The inhabitants stay below the surface in the smooth tunnels crafted by the formic race many years ago."
 	earthDesc                  = "A world doomed. A planet that needs a savior. To go back now is to let the wretched Formics win."
+	shakespeareDesc            = "The next frontier for human expansion. With the buggers eliminated, we can take their land and breed the next generation of humans and crops."
+	rotterdamDesc              = "A city of ruins. The streets are filled with starved children fighting to the death."
 )
 
 // Entity names.
@@ -32,10 +34,12 @@ const (
 	// Friends
 	colonelGraph = "Colonel Graph"
 	bean         = "Bean"
+	mazer        = "Mazer Rackham"
 	// Enemies
 	bonzo       = "Bonito de Madrid"
 	formicFleet = "Formic Fleet"
 	hiveQueen   = "Hive Queen"
+	achilles    = "Achilles de Flandres"
 )
 
 // Room Numbers
@@ -44,11 +48,13 @@ const (
 	battleSchoolBarracks   = 2
 	battleSchoolGameRoom   = 3
 	battleSchoolBattleRoom = 4
-	eros                   = 5 // Hidden until defeating bonzo
-	shakespeare            = 6 // Hidden until defeating formics.
-	formicStarSystem       = 7
-	formicHomeWorld        = 8
-	earth                  = 9 // Hidden until defeating or losing to bonzo.
+	formicStarSystem       = 5
+	formicHomeWorld        = 6
+	rotterdam              = 7
+
+	eros        = 11 // Hidden until defeating bonzo
+	shakespeare = 12 // Hidden until defeating formics.
+	earth       = 13 // Hidden until defeating or losing to bonzo.
 )
 
 func (g *game) createRooms() {
@@ -79,11 +85,17 @@ func (g *game) createRooms() {
 					RoomName:   "The Battle Room",
 					RoomDesc:   battleSchoolBattleRoomDesc,
 				},
-				{
+				{ // secret.
 					Type:       lurk.TypeConnection,
 					RoomNumber: eros,
 					RoomName:   "Eros",
 					RoomDesc:   erosDesc,
+				},
+				{ // secret.
+					Type:       lurk.TypeConnection,
+					RoomNumber: earth,
+					RoomName:   "Earth",
+					RoomDesc:   earthDesc,
 				},
 			},
 		},
@@ -149,6 +161,12 @@ func (g *game) createRooms() {
 					RoomName:   "Formic Home World",
 					RoomDesc:   formicHomeWorldDesc,
 				},
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: shakespeare,
+					RoomName:   "Shakespeare Colony",
+					RoomDesc:   shakespeareDesc,
+				},
 			},
 		},
 		eros: {
@@ -158,13 +176,51 @@ func (g *game) createRooms() {
 				RoomName:   "Eros",
 				RoomDesc:   erosDesc,
 			},
+			connections: []*lurk.Connection{ // secret.
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: shakespeare,
+					RoomName:   "Shakespeare Colony",
+					RoomDesc:   shakespeareDesc,
+				},
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: formicStarSystem,
+					RoomName:   "Formic Star System",
+					RoomDesc:   formicStarSystemDesc,
+				},
+			},
 		},
-		earth: {
+		earth: { // No escape.
 			r: &lurk.Room{
 				Type:       lurk.TypeRoom,
 				RoomNumber: earth,
 				RoomName:   "Earth",
 				RoomDesc:   earthDesc,
+			},
+			connections: []*lurk.Connection{
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: rotterdam,
+					RoomName:   "Rotterdam, The Netherlands",
+					RoomDesc:   rotterdamDesc,
+				},
+			},
+		},
+		rotterdam: {
+			r: &lurk.Room{
+				Type:       lurk.TypeRoom,
+				RoomNumber: rotterdam,
+				RoomName:   "Rotterdam, The Netherlands",
+				RoomDesc:   rotterdamDesc,
+			},
+		},
+		shakespeare: { // No escape.
+			r: &lurk.Room{
+				Type:       lurk.TypeRoom,
+				RoomNumber: shakespeare,
+				RoomName:   "Shakespeare Colony",
+				RoomDesc:   shakespeareDesc,
 			},
 		},
 	}
@@ -201,6 +257,82 @@ func (g *game) createMonsters() {
 			RoomNum:    battleSchoolBarracks,
 			PlayerDesc: "The littlest one in battle school. You would be mistaken to think that is an indication of his power, though.",
 		},
+		mazer: {
+			Type: lurk.TypeCharacter,
+			Name: bean,
+			Flags: map[string]bool{
+				lurk.Alive:   true,
+				lurk.Monster: true, // Maybe monster?
+			},
+			Attack:     100,
+			Defense:    200,
+			Regen:      200,
+			Health:     100,
+			Gold:       0,
+			RoomNum:    eros,
+			PlayerDesc: "Once believed to be dead, the greatest commander in all of history has shown up again. It seems his only intention is to train the next great commander of history. He will accomplish his goal or kill someone in the process.",
+		},
+		bonzo: {
+			Type: lurk.TypeCharacter,
+			Name: bonzo,
+			Flags: map[string]bool{
+				lurk.Alive:   true,
+				lurk.Monster: true,
+			},
+			Attack:     100,
+			Defense:    200,
+			Regen:      50,
+			Health:     100,
+			Gold:       0,
+			RoomNum:    battleSchoolBattleRoom,
+			PlayerDesc: "Benito de Madrid; pretty boy. He will fight till the death for his families honor. To cross Bonzo is to can be the worst mistake you will make in your potentially short life.",
+		},
+		formicFleet: {
+			Type: lurk.TypeCharacter,
+			Name: formicFleet,
+			Flags: map[string]bool{
+				lurk.Alive:   true,
+				lurk.Monster: true,
+			},
+			Attack:     100,
+			Defense:    100,
+			Regen:      0,
+			Health:     1000,
+			Gold:       0,
+			RoomNum:    formicStarSystem,
+			PlayerDesc: "A fleet of not thousands, or tens of thousands, but millions of individual formic creatures. They seems to move as if instructed by a single mind, perhaps a queen.",
+		},
+		hiveQueen: {
+			Type: lurk.TypeCharacter,
+			Name: hiveQueen,
+			Flags: map[string]bool{
+				lurk.Alive:      true,
+				lurk.Monster:    false, // not a monster, special type.
+				lurk.JoinBattle: true,
+			},
+			Attack:     0,
+			Defense:    0,
+			Regen:      0,
+			Health:     1000,
+			Gold:       0,
+			RoomNum:    formicHomeWorld,
+			PlayerDesc: "The epitome of beauty and horror. There isn't a more terrifying creature imaginable by man. All the propaganda back on earth does not do justice to the fear that this creature invokes in one's heart. At the same time though, there is nothing more beautiful. You can feel her presence in your own, her mind in yours. To kill this creature is to kill your own self.",
+		},
+		achilles: {
+			Type: lurk.TypeCharacter,
+			Name: achilles,
+			Flags: map[string]bool{
+				lurk.Alive:   true,
+				lurk.Monster: true,
+			},
+			Attack:     500,
+			Defense:    400,
+			Regen:      50,
+			Health:     1000,
+			Gold:       0,
+			RoomNum:    rotterdam,
+			PlayerDesc: "This boy seems to have taken control of the streets. Starving children cling to him as their papa. However, few claim he is must more than that...",
+		},
 	}
 }
 
@@ -234,6 +366,7 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 	user.c.RoomNum = room.r.RoomNumber
 	return g.sendRoom(room, player, conn)
 }
+
 func (g *game) handleFight(fight *lurk.Fight, player string)        {}
 func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string)    {}
 func (g *game) handleLoot(loot *lurk.Loot, player string)           {}

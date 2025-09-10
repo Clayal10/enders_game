@@ -82,6 +82,8 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(ok)
 
 		a.True(strings.Contains(e.ErrMessage, "has invalid stats"))
+
+		sendLeave(conn, a)
 	})
 	t.Run("TestBasicGameplay", func(_ *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
@@ -111,15 +113,64 @@ func TestServerFunctionality(t *testing.T) {
 		a.NoError(err)
 
 		a.True(msg.GetType() == lurk.TypeRoom)
-		// Do more assertions and other gameplay here!
-		// Need to read ALL messages
 
-		ba, err := lurk.Marshal(&lurk.Leave{
-			Type: lurk.TypeLeave,
-		})
+		paths := []*lurk.Connection{}
+		characters := []*lurk.Character{}
+
+		for {
+			conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			buffer, _, err = readSingleMessage(conn)
+			if err != nil {
+				break
+			}
+			msg, err := lurk.Unmarshal(buffer)
+			a.NoError(err)
+			switch msg.GetType() {
+			case lurk.TypeCharacter:
+				characters = append(characters, msg.(*lurk.Character))
+			case lurk.TypeConnection:
+				paths = append(paths, msg.(*lurk.Connection))
+			default:
+				continue
+			}
+		}
+		a.True(len(characters) != 0)
+		a.True(len(paths) != 0)
+
+		cr := &lurk.ChangeRoom{
+			Type:       lurk.TypeChangeRoom,
+			RoomNumber: paths[0].RoomNumber,
+		}
+		ba, err := lurk.Marshal(cr)
 		a.NoError(err)
 		_, err = conn.Write(ba)
 		a.NoError(err)
+
+		paths = paths[:0]
+		characters = characters[:0]
+		for {
+			conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			buffer, _, err = readSingleMessage(conn)
+			if err != nil {
+				break
+			}
+			msg, err := lurk.Unmarshal(buffer)
+			a.NoError(err)
+			switch msg.GetType() {
+			case lurk.TypeCharacter:
+				// Could battle in the future
+				characters = append(characters, msg.(*lurk.Character))
+			case lurk.TypeConnection:
+				paths = append(paths, msg.(*lurk.Connection))
+			default:
+				continue
+			}
+		}
+
+		a.True(len(characters) != 0)
+		a.True(len(paths) != 0)
+
+		sendLeave(conn, a)
 
 		time.Sleep(50 * time.Millisecond)
 
@@ -152,12 +203,7 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(ok)
 		a.True(strings.Contains(e.ErrMessage, "Message contains invalid fields"))
 
-		ba, err = lurk.Marshal(&lurk.Leave{
-			Type: lurk.TypeLeave,
-		})
-		a.NoError(err)
-		_, err = conn2.Write(ba)
-		a.NoError(err)
+		sendLeave(conn2, a)
 	})
 
 	t.Run("TestInitialMessageErrors", func(_ *testing.T) {
@@ -204,7 +250,6 @@ func TestServerFunctionality(t *testing.T) {
 		e, ok := errMessage.(*lurk.Error)
 		a.True(ok)
 		a.True(strings.Contains(e.ErrMessage, "Bad message"))
-
 	})
 }
 
@@ -229,6 +274,17 @@ func TestServerStartupErrors(t *testing.T) {
 			cf()
 		}
 	})
+}
+
+func sendLeave(conn net.Conn, a *assert.Assert) {
+	leave := &lurk.Leave{
+		Type: lurk.TypeLeave,
+	}
+	ba, err := lurk.Marshal(leave)
+	a.NoError(err)
+
+	_, err = conn.Write(ba)
+	a.NoError(err)
 }
 
 func readUntil(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMessage {

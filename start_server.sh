@@ -3,9 +3,12 @@
 set -e
 
 stop_server () {
-    echo "Killing active server"
     pid=$(ps axu | grep ./enders_game | head -n 1 | grep -oP '^\S+\s+\K\S+')
-    kill "$pid"
+    lines=$(ps axu | grep ./enders_game | wc -l)
+    if [ "$lines" == "2" ]; then
+        echo "Killing active server"
+        kill "$pid"
+    fi
     rm -r ./bin
 }
 
@@ -24,10 +27,7 @@ mkdir bin
 
 echo "Building Ender's Game Server"
 
-cd apps/server/config
-cp Config.json ../../../bin/
-
-cd ../code
+cd apps/server/code
 go build -o enders_game .
 mv enders_game ../../../bin/
 cd ../../../bin/

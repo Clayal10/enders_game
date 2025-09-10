@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -40,6 +41,8 @@ const (
 	initialPoints = 100
 )
 
+var errDisconnect = errors.New("disconnect")
+
 // when creating a new game, we need to initialize the rooms and all entities.
 func newGame() *game {
 	g := &game{
@@ -52,37 +55,6 @@ func newGame() *game {
 	g.createMonsters()
 
 	return g
-}
-
-func (g *game) sendStart(conn net.Conn) error {
-	version := &lurk.Version{
-		Type:  lurk.TypeVersion,
-		Major: 2,
-		Minor: 3,
-	}
-
-	g.game = &lurk.Game{
-		Type:          lurk.TypeGame,
-		InitialPoints: initialPoints,
-		StatLimit:     initialPoints,
-		GameDesc:      gameDescription,
-	}
-
-	ba, err := lurk.Marshal(version)
-	if err != nil {
-		return err
-	}
-
-	if _, err = conn.Write(ba); err != nil {
-		return err
-	}
-
-	if ba, err = lurk.Marshal(g.game); err != nil {
-		return err
-	}
-
-	_, err = conn.Write(ba)
-	return err
 }
 
 func (g *game) registerPlayer(conn net.Conn) (string, error) {
@@ -280,67 +252,9 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		g.handleCharacter(msg, player)
 	case lurk.TypeLeave:
 		g.handleLeave(player)
+		return errDisconnect, false
 	default:
 		return nil, false
 	}
 	return err, true
-}
-
-func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
-	ba, err := lurk.Marshal(room.r)
-	if err != nil {
-		return err
-	}
-	if _, err = conn.Write(ba); err != nil {
-		return err
-	}
-	// all characters and monsters in that room
-	for k, user := range g.users {
-		// should we include current user?
-		if k == player || user.c.RoomNum != room.r.RoomNumber {
-			continue
-		}
-		if ba, err = lurk.Marshal(user.c); err != nil {
-			return err
-		}
-		if _, err = conn.Write(ba); err != nil {
-			return err
-		}
-	}
-
-	for _, npc := range g.monsters {
-		if npc.RoomNum != room.r.RoomNumber {
-			continue
-		}
-		if ba, err = lurk.Marshal(npc); err != nil {
-			return err
-		}
-		if _, err = conn.Write(ba); err != nil {
-			return err
-		}
-	}
-
-	for _, connection := range room.connections {
-		if ba, err = lurk.Marshal(connection); err != nil {
-			return err
-		}
-		if _, err = conn.Write(ba); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (g *game) sendAccept(conn net.Conn, action lurk.MessageType) error {
-	accept := &lurk.Accept{
-		Type:   lurk.TypeAccept,
-		Action: action,
-	}
-
-	ba, err := lurk.Marshal(accept)
-	if err != nil {
-		return err
-	}
-	_, err = conn.Write(ba)
-	return err
 }
