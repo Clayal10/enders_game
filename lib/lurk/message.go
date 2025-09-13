@@ -510,8 +510,8 @@ func marshalRoom(room *Room) []byte {
 
 type Character struct {
 	Type       MessageType
-	Name       string // 32 bytes
-	Flags      map[string]bool
+	Name       string          // 32 bytes
+	Flags      map[string]bool // Alive, Join, Monster, Started, Ready
 	Attack     uint16
 	Defense    uint16
 	Regen      uint16

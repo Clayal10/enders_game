@@ -224,7 +224,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		g.handleFight(msg, player)
+		g.handleFight(msg, conn, player)
 	case lurk.TypePVPFight:
 		msg, ok := lm.(*lurk.PVPFight)
 		if !ok {

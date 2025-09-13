@@ -250,7 +250,7 @@ func (g *game) createMonsters() {
 			Attack:     20,
 			Defense:    100,
 			Regen:      100,
-			Health:     100,
+			Health:     50,
 			Gold:       0,
 			RoomNum:    battleSchool,
 			PlayerDesc: "An older man, starting to let himself go, but sturdy non the less.",
@@ -263,7 +263,7 @@ func (g *game) createMonsters() {
 				lurk.Monster: true,
 			},
 			Attack:     10,
-			Defense:    200,
+			Defense:    100,
 			Regen:      100,
 			Health:     100,
 			Gold:       0,
@@ -277,8 +277,8 @@ func (g *game) createMonsters() {
 				lurk.Alive:   true,
 				lurk.Monster: true,
 			},
-			Attack:     10,
-			Defense:    200,
+			Attack:     20,
+			Defense:    80,
 			Regen:      100,
 			Health:     100,
 			Gold:       0,
@@ -293,8 +293,8 @@ func (g *game) createMonsters() {
 				lurk.Monster: true,
 			},
 			Attack:     100,
-			Defense:    200,
-			Regen:      200,
+			Defense:    100,
+			Regen:      0,
 			Health:     100,
 			Gold:       0,
 			RoomNum:    eros,
@@ -308,9 +308,9 @@ func (g *game) createMonsters() {
 				lurk.Monster: true,
 			},
 			Attack:     100,
-			Defense:    200,
+			Defense:    50,
 			Regen:      50,
-			Health:     100,
+			Health:     75,
 			Gold:       0,
 			RoomNum:    battleSchoolBattleRoom,
 			PlayerDesc: "Benito de Madrid; pretty boy. He will fight till the death for his families honor. To cross Bonzo is to can be the worst mistake you will make in your potentially short life.",
@@ -322,10 +322,10 @@ func (g *game) createMonsters() {
 				lurk.Alive:   true,
 				lurk.Monster: true,
 			},
-			Attack:     100,
-			Defense:    100,
+			Attack:     50,
+			Defense:    50,
 			Regen:      0,
-			Health:     1000,
+			Health:     10000,
 			Gold:       0,
 			RoomNum:    formicStarSystem,
 			PlayerDesc: "A fleet of not thousands, or tens of thousands, but millions of individual formic creatures. They seems to move as if instructed by a single mind, perhaps a queen.",
@@ -352,8 +352,8 @@ func (g *game) createMonsters() {
 				lurk.Alive:   true,
 				lurk.Monster: true,
 			},
-			Attack:     500,
-			Defense:    400,
+			Attack:     100,
+			Defense:    100,
 			Regen:      50,
 			Health:     1000,
 			Gold:       0,
@@ -367,8 +367,8 @@ func (g *game) createMonsters() {
 				lurk.Alive:   true,
 				lurk.Monster: true,
 			},
-			Attack:     500,
-			Defense:    400,
+			Attack:     100,
+			Defense:    100,
 			Regen:      50,
 			Health:     1000,
 			Gold:       0,
@@ -427,7 +427,7 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 		return err
 	}
 
-	// Message others in the room that they have left.
+	// Message others in the room that they have left and those in the room they are going to.
 	for name, u := range g.users {
 		msg := ""
 		if rn := currentRoom.r.RoomNumber; u.c.RoomNum == rn {
@@ -445,12 +445,19 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 		}
 	}
 
-	// Message users in the new room too.
 	return nil
-
 }
 
-func (g *game) handleFight(fight *lurk.Fight, player string)        {}
+func (g *game) handleFight(fight *lurk.Fight, conn net.Conn, player string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	user, ok := g.users[player]
+	if !ok {
+		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in fighting", cross.ErrUserNotInServer.Error()))
+	}
+
+	return nil
+}
 func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string)    {}
 func (g *game) handleLoot(loot *lurk.Loot, player string)           {}
 func (g *game) handleCharacter(char *lurk.Character, player string) {}
