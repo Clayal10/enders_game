@@ -47,3 +47,9 @@ func (a *Assert) EqualSlice(one []byte, two []byte) {
 		}
 	}
 }
+
+func (a *Assert) NotNil(obj any) {
+	if obj == nil {
+		a.t.Fail()
+	}
+}

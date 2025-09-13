@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/Clayal10/enders_game/lib/cross"
@@ -396,10 +397,12 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	user, ok := g.users[player]
+	// Checks for user.
 	if !ok {
 		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in changing room", cross.ErrUserNotInServer.Error()))
 	}
 
+	// Check for valid request.
 	currentRoom := g.rooms[user.c.RoomNum]
 	hasConnection := false
 	for _, connection := range currentRoom.connections {
@@ -413,13 +416,38 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 		return g.sendError(conn, cross.BadRoom, fmt.Sprintf("%v: error in changing room", cross.ErrRoomsNotConnected.Error()))
 	}
 
-	room, ok := g.rooms[changeRoom.RoomNumber]
+	newRoom, ok := g.rooms[changeRoom.RoomNumber]
 	if !ok {
 		return g.sendError(conn, cross.BadRoom, fmt.Sprintf("%v: error in changing room", cross.ErrInvalidRoomNumber.Error()))
 	}
 
-	user.c.RoomNum = room.r.RoomNumber
-	return g.sendRoom(room, player, conn)
+	// Send new room to user.
+	user.c.RoomNum = newRoom.r.RoomNumber
+	if err := g.sendRoom(newRoom, player, conn); err != nil {
+		return err
+	}
+
+	// Message others in the room that they have left.
+	for name, u := range g.users {
+		msg := ""
+		if rn := currentRoom.r.RoomNumber; u.c.RoomNum == rn {
+			if !u.allowedRoom[rn] {
+				msg = fmt.Sprintf("%s has been sent orders out of here.", user.c.Name)
+			}
+			if err := g.sendCharacterUpdate(user, u.conn, name, msg); err != nil {
+				log.Printf("%s: error when sending character updates to %s", err, name)
+			}
+			// NOTE: This will send an updated character to the user.
+		} else if rn := newRoom.r.RoomNumber; u.c.RoomNum == rn {
+			if err := g.sendCharacterUpdate(user, u.conn, name, ""); err != nil {
+				log.Printf("%s: error when sending character updates to %s", err, name)
+			}
+		}
+	}
+
+	// Message users in the new room too.
+	return nil
+
 }
 
 func (g *game) handleFight(fight *lurk.Fight, player string)        {}

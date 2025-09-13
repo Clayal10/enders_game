@@ -107,8 +107,9 @@ func readSingleMessage(conn net.Conn) ([]byte, int, error) {
 
 	b := make([]byte, bytesNeeded-1)
 	n := 0
+	defer conn.SetReadDeadline(time.Time{})
 	for n < len(b) {
-		_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		_ = conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		m, err := conn.Read(b)
 		if err != nil {
 			return nil, 0, err
@@ -129,7 +130,7 @@ func readSingleMessage(conn net.Conn) ([]byte, int, error) {
 	b = make([]byte, varLen)
 	n = 0
 	for n < len(b) {
-		_ = conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		_ = conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		m, err := conn.Read(b)
 		if err != nil {
 			return nil, 0, err
@@ -137,5 +138,6 @@ func readSingleMessage(conn net.Conn) ([]byte, int, error) {
 		buffer = append(buffer, b[:m]...)
 		n += m
 	}
+
 	return buffer, varLen + bytesNeeded, nil
 }

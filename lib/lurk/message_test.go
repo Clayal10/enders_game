@@ -22,8 +22,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 		a.True(msg.RName == "Raymond")
 		a.True(msg.SName == "Clay")
 
-		ba, err := lurk.Marshal(msg)
-		a.NoError(err)
+		ba := lurk.Marshal(msg)
 		a.EqualSlice(ba, sampleMessage)
 	})
 	t.Run("TestChangeRoomType", func(_ *testing.T) {
@@ -31,8 +30,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			Type:       lurk.TypeChangeRoom,
 			RoomNumber: 2,
 		}
-		ba, err := lurk.Marshal(changeRoom)
-		a.NoError(err)
+		ba := lurk.Marshal(changeRoom)
 		a.EqualSlice(ba, []byte{0x2, 0x2, 0x0})
 		cr2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
@@ -44,8 +42,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 		f := &lurk.Fight{
 			Type: lurk.TypeFight,
 		}
-		ba, err := lurk.Marshal(f)
-		a.NoError(err)
+		ba := lurk.Marshal(f)
 		a.EqualSlice(ba, []byte{0x3})
 		f2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
@@ -58,8 +55,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			Type:       lurk.TypePVPFight,
 			TargetName: "Clay",
 		}
-		ba, err := lurk.Marshal(pvp)
-		a.NoError(err)
+		ba := lurk.Marshal(pvp)
 		a.EqualSlice(ba, []byte{0x04, 0x43, 0x6c, 0x61, 0x79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 		pvp2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
@@ -72,8 +68,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			Type:       lurk.TypeLoot,
 			TargetName: "Clay",
 		}
-		ba, err := lurk.Marshal(loot)
-		a.NoError(err)
+		ba := lurk.Marshal(loot)
 		a.EqualSlice(ba, []byte{0x05, 0x43, 0x6c, 0x61, 0x79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 		l2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
@@ -85,8 +80,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 		s := &lurk.Start{
 			Type: lurk.TypeStart,
 		}
-		ba, err := lurk.Marshal(s)
-		a.NoError(err)
+		ba := lurk.Marshal(s)
 		a.EqualSlice(ba, []byte{0x6})
 		s2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
@@ -100,8 +94,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			ErrCode:    cross.Other,
 			ErrMessage: "Hello",
 		}
-		ba, err := lurk.Marshal(e)
-		a.NoError(err)
+		ba := lurk.Marshal(e)
 		a.EqualSlice(ba, []byte{0x7, 0x0, 0x5, 0x0, 0x48, 0x65, 0x6c, 0x6c, 0x6f})
 		e2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
@@ -115,8 +108,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			Type:   lurk.TypeAccept,
 			Action: lurk.TypeMessage,
 		}
-		ba, err := lurk.Marshal(accept)
-		a.NoError(err)
+		ba := lurk.Marshal(accept)
 		a.EqualSlice(ba, []byte{0x08, 0x1})
 		a2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
@@ -131,8 +123,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			RoomName:   "Test",
 			RoomDesc:   "Test Room",
 		}
-		ba, err := lurk.Marshal(room)
-		a.NoError(err)
+		ba := lurk.Marshal(room)
 		r2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
 		room2, ok := r2.(*lurk.Room)
@@ -159,8 +150,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			RoomNum:    6,
 			PlayerDesc: "This is Clay",
 		}
-		ba, err := lurk.Marshal(character)
-		a.NoError(err)
+		ba := lurk.Marshal(character)
 		char2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
 		character2, ok := char2.(*lurk.Character)
@@ -178,8 +168,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			StatLimit:     100,
 			GameDesc:      "This is a game",
 		}
-		ba, err := lurk.Marshal(game)
-		a.NoError(err)
+		ba := lurk.Marshal(game)
 		g2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
 		game2, ok := g2.(*lurk.Game)
@@ -193,8 +182,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 			RoomName:   "Test Room",
 			RoomDesc:   "Just a test room",
 		}
-		ba, err := lurk.Marshal(c)
-		a.NoError(err)
+		ba := lurk.Marshal(c)
 		c2, err := lurk.Unmarshal(ba)
 		a.NoError(err)
 		connection2, ok := c2.(*lurk.Connection)
@@ -211,8 +199,7 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 				{0xFF, 0xFF},
 			},
 		}
-		ba, err := lurk.Marshal(e)
-		a.NoError(err)
+		ba := lurk.Marshal(e)
 		a.True(binary.LittleEndian.Uint16(ba[3:]) == uint16(8))
 		a.True(binary.LittleEndian.Uint16(ba[5:]) == uint16(2))
 		e2, err := lurk.Unmarshal(ba)
@@ -234,10 +221,9 @@ func TestLurkErrorCases(t *testing.T) {
 			ErrCode:    10,
 			ErrMessage: "Hello",
 		}
-		ba, err := lurk.Marshal(e)
-		a.NoError(err)
+		ba := lurk.Marshal(e)
 		a.EqualSlice(ba, []byte{0x7, 0xa, 0x5, 0x0, 0x48, 0x65, 0x6c, 0x6c, 0x6f})
-		_, err = lurk.Unmarshal(ba)
+		_, err := lurk.Unmarshal(ba)
 		a.Error(err)
 		a.True(errors.Is(err, cross.ErrInvalidErrCode))
 	})
@@ -254,6 +240,87 @@ func TestLurkErrorCases(t *testing.T) {
 		a.Error(err)
 		a.True(errors.Is(err, cross.ErrFrameTooSmall))
 	})
+}
+
+func TestVariableLengthQuery(t *testing.T) {
+	a := assert.New(t)
+	for _, test := range variableLengthTests {
+		t.Run(test.name, func(_ *testing.T) {
+			got, err := lurk.GetVariableLength(test.ba)
+			a.NoError(err)
+			a.True(got == test.expected)
+		})
+	}
+}
+
+var variableLengthTests = []struct {
+	name     string
+	ba       []byte
+	expected int
+}{
+	{
+		"TestTypeMessageLength",
+		lurk.Marshal(&lurk.Message{
+			Text: "test",
+		}),
+		4,
+	},
+	{
+		"TestTypeErrorLength",
+		lurk.Marshal(&lurk.Error{
+			ErrMessage: "test",
+		}),
+		4,
+	},
+	{
+		"TestTypeRoomLength",
+		lurk.Marshal(&lurk.Room{
+			RoomDesc: "test",
+		}),
+		4,
+	},
+	{
+		"TestTypeCharacterLength",
+		lurk.Marshal(&lurk.Character{
+			PlayerDesc: "test",
+			Flags: map[string]bool{
+				lurk.Alive:      true,
+				lurk.Monster:    true,
+				lurk.JoinBattle: true,
+				lurk.Ready:      true,
+				lurk.Started:    true,
+			},
+		}),
+		4,
+	},
+	{
+		"TestTypeConnectionLength",
+		lurk.Marshal(&lurk.Connection{
+			RoomDesc: "test",
+		}),
+		4,
+	},
+	{
+		"TestTypeVersionLength",
+		lurk.Marshal(&lurk.Version{
+			Extensions: [][]byte{
+				{0, 0, 0, 0},
+			},
+		}),
+		6, // Each version list has a 2 byte length value.
+	},
+	{
+		"TestTypeGameLength",
+		lurk.Marshal(&lurk.Game{
+			GameDesc: "test",
+		}),
+		4,
+	},
+	{
+		"TestInvalidTypeLength",
+		lurk.Marshal(&lurk.Start{}),
+		-1,
+	},
 }
 
 // With narration

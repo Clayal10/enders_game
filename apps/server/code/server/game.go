@@ -116,12 +116,7 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 		characterID = g.createUser(character, conn)
 		g.mu.Unlock()
 
-		ba, err := lurk.Marshal(character)
-		if err != nil {
-			return characterID, err
-		}
-
-		if _, err = conn.Write(ba); err != nil {
+		if _, err = conn.Write(lurk.Marshal(character)); err != nil {
 			return characterID, err
 		}
 
@@ -146,19 +141,20 @@ func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
 	for room := battleSchool; room <= rotterdam; room++ {
 		u.allowedRoom[room] = true
 	}
+	for room := eros; room <= earth; room++ {
+		u.allowedRoom[room] = false
+	}
+
 	g.users[character.Name] = u
 	return character.Name
 }
 
 func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
-	ba, err := lurk.Marshal(&lurk.Error{
+	_, err := conn.Write(lurk.Marshal(&lurk.Error{
 		Type:       lurk.TypeError,
 		ErrCode:    code,
 		ErrMessage: msg,
-	})
-	if err == nil {
-		_, err = conn.Write(ba)
-	}
+	}))
 	return err
 }
 
