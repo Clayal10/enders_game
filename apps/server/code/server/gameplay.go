@@ -48,17 +48,17 @@ const (
 
 // Room Numbers
 const (
-	battleSchool           = 1 // Central hub / hallways / entrance / exit for battle school.
-	battleSchoolBarracks   = 2
-	battleSchoolGameRoom   = 3
-	battleSchoolBattleRoom = 4
-	formicStarSystem       = 5
-	formicHomeWorld        = 6
-	rotterdam              = 7
+	battleSchool           uint16 = 1 // Central hub / hallways / entrance / exit for battle school.
+	battleSchoolBarracks   uint16 = 2
+	battleSchoolGameRoom   uint16 = 3
+	battleSchoolBattleRoom uint16 = 4
+	formicStarSystem       uint16 = 5
+	formicHomeWorld        uint16 = 6
+	rotterdam              uint16 = 7
 
-	eros        = 11 // Hidden until defeating bonzo
-	shakespeare = 12 // Hidden until defeating formics.
-	earth       = 13 // Hidden until defeating or losing to bonzo.
+	eros        uint16 = 11 // Hidden until defeating bonzo
+	shakespeare uint16 = 12 // Hidden until defeating formics.
+	earth       uint16 = 13 // Hidden until defeating or losing to bonzo.
 )
 
 func (g *game) createRooms() {
@@ -403,8 +403,8 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 	currentRoom := g.rooms[user.c.RoomNum]
 	hasConnection := false
 	for _, connection := range currentRoom.connections {
-		hasConnection = connection.RoomNumber == changeRoom.RoomNumber
-		if hasConnection {
+		if hasConnection = connection.RoomNumber == changeRoom.RoomNumber &&
+			user.allowedRoom[changeRoom.RoomNumber]; hasConnection {
 			break
 		}
 	}

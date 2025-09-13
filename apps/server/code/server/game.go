@@ -36,11 +36,6 @@ type room struct {
 	connections []*lurk.Connection
 }
 
-// default game values.
-const (
-	initialPoints = 100
-)
-
 var errDisconnect = errors.New("disconnect")
 
 // when creating a new game, we need to initialize the rooms and all entities.
@@ -143,11 +138,15 @@ func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
 	// Character is good at this point, flip flag and wait for their start.
 	character.Flags[lurk.Ready] = true
 	character.RoomNum = battleSchool
-	g.users[character.Name] = &user{
+	u := &user{
 		c:           character,
 		conn:        conn,
 		allowedRoom: make(map[uint16]bool),
 	}
+	for room := battleSchool; room <= rotterdam; room++ {
+		u.allowedRoom[room] = true
+	}
+	g.users[character.Name] = u
 	return character.Name
 }
 
@@ -164,9 +163,7 @@ func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
 }
 
 func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
-	if c.Attack >= g.game.StatLimit ||
-		c.Defense >= g.game.StatLimit ||
-		c.Regen >= g.game.StatLimit {
+	if c.Attack+c.Defense+c.Regen > g.game.InitialPoints {
 		return cross.StatError
 	}
 

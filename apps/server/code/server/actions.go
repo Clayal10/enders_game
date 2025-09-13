@@ -8,6 +8,12 @@ import (
 
 // These functions may need thread protection before getting called.
 
+// default game values.
+const (
+	initialPoints = 100
+	statLimit     = 65535
+)
+
 func (g *game) sendStart(conn net.Conn) error {
 	version := &lurk.Version{
 		Type:  lurk.TypeVersion,
@@ -18,7 +24,7 @@ func (g *game) sendStart(conn net.Conn) error {
 	g.game = &lurk.Game{
 		Type:          lurk.TypeGame,
 		InitialPoints: initialPoints,
-		StatLimit:     initialPoints,
+		StatLimit:     statLimit,
 		GameDesc:      gameDescription,
 	}
 
@@ -52,7 +58,7 @@ func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
 		return err
 	}
 
-	return g.sendConnections(room, conn)
+	return g.sendConnections(room, player, conn)
 }
 
 func (g *game) sendCharacters(room *room, player string, conn net.Conn) (err error) {
@@ -85,9 +91,12 @@ func (g *game) sendCharacters(room *room, player string, conn net.Conn) (err err
 	return
 }
 
-func (g *game) sendConnections(room *room, conn net.Conn) (err error) {
+func (g *game) sendConnections(room *room, player string, conn net.Conn) (err error) {
 	var ba []byte
 	for _, connection := range room.connections {
+		if !g.users[player].allowedRoom[connection.RoomNumber] {
+			continue
+		}
 		if ba, err = lurk.Marshal(connection); err != nil {
 			return err
 		}

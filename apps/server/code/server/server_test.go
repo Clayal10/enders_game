@@ -90,8 +90,8 @@ func TestServerFunctionality(t *testing.T) {
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester",
 			Attack:     99,
-			Defense:    90,
-			Regen:      80,
+			Defense:    1,
+			Regen:      0,
 			RoomNum:    2,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
@@ -99,9 +99,9 @@ func TestServerFunctionality(t *testing.T) {
 		conn2 := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester 2",
-			Attack:     99,
-			Defense:    90,
-			Regen:      80,
+			Attack:     50,
+			Defense:    49,
+			Regen:      1,
 			RoomNum:    2,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
