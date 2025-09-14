@@ -88,10 +88,10 @@ func TestServerFunctionality(t *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester",
-			Attack:     99,
-			Defense:    1,
-			Regen:      0,
-			RoomNum:    2,
+			Attack:     50,
+			Defense:    0,
+			Regen:      10,
+			RoomNum:    1,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
@@ -101,7 +101,7 @@ func TestServerFunctionality(t *testing.T) {
 			Attack:     50,
 			Defense:    49,
 			Regen:      1,
-			RoomNum:    2,
+			RoomNum:    1,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
@@ -138,7 +138,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		cr := &lurk.ChangeRoom{
 			Type:       lurk.TypeChangeRoom,
-			RoomNumber: paths[0].RoomNumber,
+			RoomNumber: battleSchoolGameRoom,
 		}
 		ba := lurk.Marshal(cr)
 		_, err = conn.Write(ba)
@@ -168,11 +168,17 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(len(characters) != 0)
 		a.True(len(paths) != 0)
 
+		//Fight petra
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+		time.Sleep(50 * time.Millisecond)
+		a.True(strings.Contains(buf.String(), "died in a fight"))
+
 		sendLeave(conn, a)
 
 		time.Sleep(50 * time.Millisecond)
 
-		a.True(strings.Contains(buf.String(), "User left."))
+		a.True(strings.Contains(buf.String(), "left."))
 		/* Termination of conn*/
 
 		buffer, _, err = readSingleMessage(conn2)
@@ -270,6 +276,17 @@ func TestServerStartupErrors(t *testing.T) {
 			cf()
 		}
 	})
+}
+
+func emptyConnection(conn net.Conn, a *assert.Assert) {
+	for {
+		_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+		_, _, err := readSingleMessage(conn)
+		if err != nil {
+			break
+		}
+	}
+	_ = conn.SetReadDeadline(time.Time{})
 }
 
 func sendLeave(conn net.Conn, a *assert.Assert) {

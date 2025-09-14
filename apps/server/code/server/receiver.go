@@ -77,7 +77,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		log.Printf("%v: error during gameplay", err.Error())
 		return
 	}
-	log.Printf("User left.")
+	log.Printf("%v left.", player)
 	delete(rec.users, player)
 	time.Sleep(terminationTimeout)
 }

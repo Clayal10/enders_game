@@ -173,6 +173,12 @@ func (g *game) createRooms() {
 					RoomName:   "Shakespeare Colony",
 					RoomDesc:   shakespeareDesc,
 				},
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: eros,
+					RoomName:   "Eros",
+					RoomDesc:   erosDesc,
+				},
 			},
 		},
 		eros: {
@@ -194,6 +200,12 @@ func (g *game) createRooms() {
 					RoomNumber: formicStarSystem,
 					RoomName:   "Formic Star System",
 					RoomDesc:   formicStarSystemDesc,
+				},
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: battleSchool,
+					RoomName:   "Battle School",
+					RoomDesc:   battleSchoolDesc,
 				},
 			},
 		},
@@ -229,7 +241,7 @@ func (g *game) createRooms() {
 				},
 			},
 		},
-		shakespeare: { // No escape.
+		shakespeare: {
 			r: &lurk.Room{
 				Type:       lurk.TypeRoom,
 				RoomNumber: shakespeare,
@@ -370,7 +382,7 @@ func (g *game) createMonsters() {
 			Attack:     50,
 			Defense:    50,
 			Regen:      0,
-			Health:     10000,
+			Health:     1000,
 			Gold:       0,
 			RoomNum:    formicStarSystem,
 			PlayerDesc: "A fleet of not thousands, or tens of thousands, but millions of individual formic creatures. They seems to move as if instructed by a single mind, perhaps a queen.",
@@ -523,6 +535,14 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 		if user.c.Flags[lurk.Alive] {
 			user.c.Gold += monsterGold[monster.Name]
 		}
+
+		if monster.Name == hiveQueen && !monster.Flags[lurk.Alive] {
+			user.killedQueen = true
+		}
+		if monster.Name == formicFleet && !monster.Flags[lurk.Alive] {
+			user.killedFleet = true
+		}
+
 		g.startHealTimer(monster)
 		if err := g.sendCharacters(currentRoom, player, conn); err != nil {
 			return err
@@ -538,7 +558,8 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 	if user.c.Flags[lurk.Alive] {
 		return nil
 	}
-	user.c.Flags[lurk.Alive] = true
+	log.Printf("%v died in a fight", user.c.Name)
+
 	_, err := conn.Write(lurk.Marshal(&lurk.Message{
 		Recipient: player,
 		Sender:    narrator,
@@ -548,7 +569,9 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 
 	return err
 }
-func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string)    {}
+func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string) {
+
+}
 func (g *game) handleLoot(loot *lurk.Loot, player string)           {}
 func (g *game) handleCharacter(char *lurk.Character, player string) {}
 func (g *game) handleLeave(player string) {

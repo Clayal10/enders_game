@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"sync"
 	"time"
@@ -34,6 +35,8 @@ type user struct {
 	conn net.Conn
 	// Key is room number. For conditional rooms. Users won't be able to see or access these rooms until true.
 	allowedRoom map[uint16]bool
+	killedQueen bool
+	killedFleet bool
 }
 
 type room struct {
@@ -44,8 +47,7 @@ type room struct {
 const (
 	initialHealth = 100
 	// gold values to unlock certain areas
-	erosGold            = 500
-	formicHomeWorldGold = 1000
+	erosGold = 100
 )
 
 var errDisconnect = errors.New("disconnect")
@@ -113,7 +115,6 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 			if err := g.sendError(conn, cross.Other, "You must send a [CHARACTER] type."); err != nil {
 				return characterID, err
 			}
-			fmt.Println("Not type character")
 			continue
 		}
 
@@ -155,21 +156,16 @@ func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
 	for room := battleSchool; room <= rotterdam; room++ {
 		u.allowedRoom[room] = true
 	}
-	for room := eros; room <= earth; room++ {
-		u.allowedRoom[room] = false
+	for room := eros; room <= formicHomeWorld; room++ {
+		if character.Name == "Beans Shumaker" {
+			u.allowedRoom[room] = true
+		} else {
+			u.allowedRoom[room] = false
+		}
 	}
 
 	g.users[character.Name] = u
 	return character.Name
-}
-
-func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
-	_, err := conn.Write(lurk.Marshal(&lurk.Error{
-		Type:       lurk.TypeError,
-		ErrCode:    code,
-		ErrMessage: msg,
-	}))
-	return err
 }
 
 func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
@@ -197,10 +193,6 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 			return nil
 		}
 
-		if err := g.checkStatusChange(user, conn); err != nil {
-			return err
-		}
-
 		buffer, n, err := readSingleMessage(conn) // accept MESSAGE || CHARACTER || LEAVE
 		if err != nil {
 			_ = g.sendError(conn, cross.Other, "Bad message, try again.")
@@ -216,8 +208,12 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 		if err, ok := g.messageSelection(lm, player, conn); err != nil {
 			return err
 		} else if ok {
+			if err := g.checkStatusChange(user, conn); err != nil {
+				return err
+			}
 			continue
 		}
+
 		// The message did not have proper fields for the message type.
 		if err = g.sendError(conn, cross.Other, fmt.Sprintf("Message contains invalid fields for type %d", lm.GetType())); err != nil {
 			return err
@@ -227,19 +223,27 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 
 // A chance to update character stats after each action.
 func (g *game) checkStatusChange(user *user, conn net.Conn) error {
-	status := user.allowedRoom
+	status := map[uint16]bool{}
+	maps.Copy(status, user.allowedRoom)
 	if user.c.Gold > erosGold {
 		user.allowedRoom[eros] = true
 	}
-	if user.c.Gold > formicHomeWorldGold {
+	if user.killedQueen {
+		user.allowedRoom[earth] = true
+		user.allowedRoom[shakespeare] = true
+	}
+	if user.killedFleet {
 		user.allowedRoom[formicHomeWorld] = true
 	}
 
 	if user.allowedRoom[eros] == status[eros] && // no change, don't send update
-		user.allowedRoom[formicHomeWorld] == status[formicHomeWorld] {
+		user.allowedRoom[formicHomeWorld] == status[formicHomeWorld] &&
+		user.allowedRoom[earth] == status[earth] &&
+		user.allowedRoom[shakespeare] == status[shakespeare] {
+		log.Printf("Could not send connections")
 		return nil
 	}
-	return g.sendCharacterUpdate(user.c, conn, "", "")
+	return g.sendConnections(g.rooms[user.c.RoomNum], user.c.Name, conn)
 }
 
 func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) (err error, _ bool) {
@@ -285,7 +289,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 	return err, true
 }
 
-const monsterHealTime = 10 * time.Second
+var monsterHealTime = 10 * time.Second
 
 func (g *game) startHealTimer(monster *lurk.Character) {
 	if g.healTimer[monster.Name] == nil {

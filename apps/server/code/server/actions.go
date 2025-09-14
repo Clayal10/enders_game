@@ -3,6 +3,7 @@ package server
 import (
 	"net"
 
+	"github.com/Clayal10/enders_game/lib/cross"
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
@@ -113,5 +114,14 @@ func (g *game) sendAccept(conn net.Conn, action lurk.MessageType) error {
 		Action: action,
 	}
 	_, err := conn.Write(lurk.Marshal(accept))
+	return err
+}
+
+func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
+	_, err := conn.Write(lurk.Marshal(&lurk.Error{
+		Type:       lurk.TypeError,
+		ErrCode:    code,
+		ErrMessage: msg,
+	}))
 	return err
 }
