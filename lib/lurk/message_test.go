@@ -19,8 +19,8 @@ func TestUnmarshalAndMarshal(t *testing.T) {
 		a.NoError(err)
 		a.True(msg.Type == lurk.TypeMessage)
 		a.True(msg.Narration)
-		a.True(msg.RName == "Raymond")
-		a.True(msg.SName == "Clay")
+		a.True(msg.Recipient == "Raymond")
+		a.True(msg.Sender == "Clay")
 
 		ba := lurk.Marshal(msg)
 		a.EqualSlice(ba, sampleMessage)

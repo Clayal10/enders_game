@@ -51,9 +51,9 @@ func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
 
 func (g *game) sendCharacters(room *room, player string, conn net.Conn) (err error) {
 	// all characters and monsters in that room
-	for k, user := range g.users {
+	for _, user := range g.users {
 		// should we include current user?
-		if k == player || user.c.RoomNum != room.r.RoomNumber {
+		if user.c.RoomNum != room.r.RoomNumber {
 			continue
 		}
 		if _, err = conn.Write(lurk.Marshal(user.c)); err != nil {
@@ -75,8 +75,8 @@ func (g *game) sendCharacters(room *room, player string, conn net.Conn) (err err
 // Takes a user object and sends it to conn. Used for notifying other users of a user's status.
 // The message will be sent if the the recipient isn't allowed to know what room the user is
 // moving to.
-func (g *game) sendCharacterUpdate(user *user, conn net.Conn, recipient string, message string) error {
-	ba := lurk.Marshal(user.c)
+func (g *game) sendCharacterUpdate(user *lurk.Character, conn net.Conn, recipient string, message string) error {
+	ba := lurk.Marshal(user)
 	if _, err := conn.Write(ba); err != nil {
 		return err
 	}
@@ -87,8 +87,8 @@ func (g *game) sendCharacterUpdate(user *user, conn net.Conn, recipient string, 
 
 	_, err := conn.Write(lurk.Marshal(&lurk.Message{
 		Type:      lurk.TypeMessage,
-		RName:     recipient,
-		SName:     narrator,
+		Recipient: recipient,
+		Sender:    narrator,
 		Text:      message,
 		Narration: true,
 	}))

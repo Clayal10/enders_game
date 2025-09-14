@@ -6,11 +6,14 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/Clayal10/enders_game/lib/cross"
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
+// game holds all information and methods needed to create a game that complies to the
+// lurk protocol actions.
 type game struct {
 	// key is name, should be unique.
 	users map[string]*user
@@ -21,7 +24,9 @@ type game struct {
 
 	game *lurk.Game
 
-	mu sync.Mutex
+	mu           sync.Mutex
+	lastActivity map[string]time.Time
+	healTimer    map[string]*time.Timer
 }
 
 type user struct {
@@ -36,14 +41,23 @@ type room struct {
 	connections []*lurk.Connection
 }
 
+const (
+	initialHealth = 100
+	// gold values to unlock certain areas
+	erosGold            = 500
+	formicHomeWorldGold = 1000
+)
+
 var errDisconnect = errors.New("disconnect")
 
 // when creating a new game, we need to initialize the rooms and all entities.
 func newGame() *game {
 	g := &game{
-		users:    make(map[string]*user),
-		monsters: make(map[string]*lurk.Character),
-		rooms:    make(map[uint16]*room),
+		users:        make(map[string]*user),
+		monsters:     make(map[string]*lurk.Character),
+		rooms:        make(map[uint16]*room),
+		lastActivity: make(map[string]time.Time),
+		healTimer:    make(map[string]*time.Timer),
 	}
 
 	g.createRooms()
@@ -166,6 +180,7 @@ func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 	if _, ok := g.users[c.Name]; ok {
 		return cross.PlayerAlreadyExists
 	}
+	c.Health = initialHealth
 	return cross.NoError
 }
 
@@ -177,8 +192,13 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	}
 
 	for {
-		if _, ok := g.users[player]; !ok { // User has been removed.
+		user, ok := g.users[player]
+		if !ok { // User has been removed / left.
 			return nil
+		}
+
+		if err := g.checkStatusChange(user, conn); err != nil {
+			return err
 		}
 
 		buffer, n, err := readSingleMessage(conn) // accept MESSAGE || CHARACTER || LEAVE
@@ -205,6 +225,23 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	}
 }
 
+// A chance to update character stats after each action.
+func (g *game) checkStatusChange(user *user, conn net.Conn) error {
+	status := user.allowedRoom
+	if user.c.Gold > erosGold {
+		user.allowedRoom[eros] = true
+	}
+	if user.c.Gold > formicHomeWorldGold {
+		user.allowedRoom[formicHomeWorld] = true
+	}
+
+	if user.allowedRoom[eros] == status[eros] && // no change, don't send update
+		user.allowedRoom[formicHomeWorld] == status[formicHomeWorld] {
+		return nil
+	}
+	return g.sendCharacterUpdate(user.c, conn, "", "")
+}
+
 func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) (err error, _ bool) {
 	switch lm.GetType() {
 	case lurk.TypeMessage:
@@ -220,11 +257,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		}
 		err = g.handleChangeRoom(msg, conn, player)
 	case lurk.TypeFight:
-		msg, ok := lm.(*lurk.Fight)
-		if !ok {
-			return nil, ok
-		}
-		g.handleFight(msg, conn, player)
+		g.handleFight(conn, player)
 	case lurk.TypePVPFight:
 		msg, ok := lm.(*lurk.PVPFight)
 		if !ok {
@@ -250,4 +283,36 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		return nil, false
 	}
 	return err, true
+}
+
+const monsterHealTime = 10 * time.Second
+
+func (g *game) startHealTimer(monster *lurk.Character) {
+	if g.healTimer[monster.Name] == nil {
+		g.healTimer[monster.Name] = time.AfterFunc(monsterHealTime, func() {
+			g.healMonster(monster)
+		})
+	} else {
+		g.healTimer[monster.Name].Reset(monsterHealTime)
+	}
+}
+
+func (g *game) healMonster(monster *lurk.Character) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	idle := time.Since(g.lastActivity[monster.Name])
+	if idle < monsterHealTime {
+		return
+	}
+	monster.Health = monsterHealth[monster.Name]
+	monster.Flags[lurk.Alive] = true
+	for _, user := range g.users {
+		if user.c.RoomNum != monster.RoomNum {
+			continue
+		}
+		if err := g.sendCharacterUpdate(monster, user.conn, user.c.Name, ""); err != nil {
+			log.Printf("%s: could not update user %v with updated monster health", err.Error(), user.c.Name)
+		}
+	}
 }

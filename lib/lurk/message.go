@@ -233,8 +233,8 @@ func validate(data []byte) error {
 
 type Message struct {
 	Type      MessageType
-	RName     string // max 32 bytes. All fields noted with bytes are null terminated '\x00'.
-	SName     string // max 30 bytes
+	Recipient string // max 32 bytes. All fields noted with bytes are null terminated '\x00'.
+	Sender    string // max 30 bytes
 	Text      string
 	Narration bool
 }
@@ -255,10 +255,10 @@ func unmarshalMessage(data []byte) (*Message, error) {
 	offset += 2
 
 	l := getNullTermLen(data[offset:])
-	m.RName = string(data[offset : offset+l])
+	m.Recipient = string(data[offset : offset+l])
 	offset += maxStringLen
 	l = getNullTermLen(data[offset:])
-	m.SName = string(data[offset : offset+l])
+	m.Sender = string(data[offset : offset+l])
 	offset += maxStringLen - 1
 
 	// Check for narration
@@ -280,9 +280,9 @@ func marshalMessage(msg *Message) []byte {
 	offset++
 	binary.LittleEndian.PutUint16(ba[offset:], msgLength)
 	offset += 2
-	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.RName))
+	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.Recipient))
 	offset += maxStringLen
-	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.SName))
+	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.Sender))
 	offset += maxStringLen - 1
 	ba[offset] = boolToByte(msg.Narration)
 	offset++

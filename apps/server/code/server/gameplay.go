@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/Clayal10/enders_game/lib/cross"
 	"github.com/Clayal10/enders_game/lib/lurk"
@@ -20,7 +21,7 @@ const (
 The world has been ravaged by the most feared and despised being known to man, the formic. When it comes down to preventing their second massacre, will you be the one to step up and destroy them?`
 	battleSchoolDesc           = "A place where young children play a game. At least, that is what the media says. The reality is that they will manipulate and contort our lives just to see what we can handle."
 	battleSchoolBarracksDesc   = "The room filled with small children, most of them scared, but none of them trying to show their weakness."
-	battleSchoolGameRoomDesc   = "Many older boys are hunched over the game table; smaller children pushed off to the side, watching, waiting."
+	battleSchoolGameRoomDesc   = "Many older boys are hunched over the game table, just trying to show off to each other. You may be able to gain some experience if someone would give you the chance."
 	battleSchoolBattleRoomDesc = "A room, 100 cubic meters in size, defying the laws of gravity. With a gate on either side of the room, us children are able to wage war against each other for honor, all the while practicing zero G movement."
 	formicStarSystemDesc       = "Out here in the cold, dark vastness of space, a world filled with billions of alien life forms lay idle."
 	formicHomeWorldDesc        = "In all of the universe, one could not find a more perfect machine working under the surface of this planet. The queen instructs, and the workers follow. Flawlessly. To see this creature is to be in awe and trembling fear at the same time."
@@ -44,7 +45,7 @@ const (
 	peter       = "Peter Wiggin"
 	hiveQueen   = "Hive Queen"
 	// both
-	hiveQueenCacoon = "Hive Queen Cacoon"
+	hiveQueenCocoon = "Hive Queen Cacoon"
 )
 
 // Room Numbers
@@ -54,12 +55,12 @@ const (
 	battleSchoolGameRoom   uint16 = 3
 	battleSchoolBattleRoom uint16 = 4
 	formicStarSystem       uint16 = 5
-	formicHomeWorld        uint16 = 6
-	rotterdam              uint16 = 7
+	rotterdam              uint16 = 6
 
-	eros        uint16 = 11 // Hidden until defeating bonzo
-	shakespeare uint16 = 12 // Hidden until defeating formics.
-	earth       uint16 = 13 // Hidden until defeating or losing to bonzo.
+	eros            uint16 = 11 // Hidden until defeating bonzo
+	shakespeare     uint16 = 12 // Hidden until defeating formics.
+	earth           uint16 = 13 // Hidden until defeating or losing to bonzo.
+	formicHomeWorld uint16 = 14
 )
 
 func (g *game) createRooms() {
@@ -236,8 +237,52 @@ func (g *game) createRooms() {
 				RoomDesc:   shakespeareDesc,
 			},
 		},
+		formicHomeWorld: {
+			r: &lurk.Room{
+				Type:       lurk.TypeRoom,
+				RoomNumber: formicHomeWorld,
+				RoomName:   "Formic Home World",
+				RoomDesc:   formicHomeWorldDesc,
+			},
+			connections: []*lurk.Connection{
+				{
+					Type:       lurk.TypeConnection,
+					RoomNumber: formicStarSystem,
+					RoomName:   "Formic Star System",
+					RoomDesc:   formicStarSystemDesc,
+				},
+			},
+		},
 	}
 }
+
+var monsterHealth = map[string]int16{
+	colonelGraph:    50,
+	bean:            100,
+	petra:           100,
+	mazer:           100,
+	bonzo:           75,
+	formicFleet:     10000,
+	hiveQueen:       1000,
+	achilles:        1000,
+	peter:           1000,
+	hiveQueenCocoon: 1,
+}
+
+// The amount of gold you gain by defeating each monster
+var monsterGold = map[string]uint16{
+	colonelGraph:    10,
+	bean:            15,
+	petra:           20,
+	mazer:           100,
+	bonzo:           50,
+	formicFleet:     1000,
+	hiveQueen:       1000,
+	achilles:        1000,
+	peter:           1000,
+	hiveQueenCocoon: 64535,
+}
+
 func (g *game) createMonsters() {
 	g.monsters = map[string]*lurk.Character{
 		colonelGraph: {
@@ -267,7 +312,7 @@ func (g *game) createMonsters() {
 			Regen:      100,
 			Health:     100,
 			Gold:       0,
-			RoomNum:    battleSchoolBarracks,
+			RoomNum:    battleSchoolBattleRoom,
 			PlayerDesc: "The littlest one in battle school. You would be mistaken to think that is an indication of his power, though.",
 		},
 		petra: {
@@ -282,8 +327,8 @@ func (g *game) createMonsters() {
 			Regen:      100,
 			Health:     100,
 			Gold:       0,
-			RoomNum:    battleSchoolBarracks,
-			PlayerDesc: "The only girl in battle school, but don't let that fool you.",
+			RoomNum:    battleSchoolGameRoom,
+			PlayerDesc: "The only girl in battle school, but she can be more dangerous that most of the boys. She could be an important teacher at this point.",
 		},
 		mazer: {
 			Type: lurk.TypeCharacter,
@@ -375,9 +420,9 @@ func (g *game) createMonsters() {
 			RoomNum:    earth,
 			PlayerDesc: "The boy who will take over the world. Peter will gain control of all those in his grasp, will you be his enemy or foe?",
 		},
-		hiveQueenCacoon: {
+		hiveQueenCocoon: {
 			Type: lurk.TypeCharacter,
-			Name: hiveQueenCacoon,
+			Name: hiveQueenCocoon,
 			Flags: map[string]bool{
 				lurk.Alive: true,
 			},
@@ -422,7 +467,11 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 	}
 
 	// Send new room to user.
-	user.c.RoomNum = newRoom.r.RoomNumber
+	if user.c.RoomNum = newRoom.r.RoomNumber; user.c.RoomNum == battleSchoolBarracks {
+		user.c.Flags[lurk.Alive] = true
+		user.c.Health = initialHealth
+	}
+
 	if err := g.sendRoom(newRoom, player, conn); err != nil {
 		return err
 	}
@@ -434,12 +483,12 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 			if !u.allowedRoom[rn] {
 				msg = fmt.Sprintf("%s has been sent orders out of here.", user.c.Name)
 			}
-			if err := g.sendCharacterUpdate(user, u.conn, name, msg); err != nil {
+			if err := g.sendCharacterUpdate(user.c, u.conn, name, msg); err != nil {
 				log.Printf("%s: error when sending character updates to %s", err, name)
 			}
 			// NOTE: This will send an updated character to the user.
 		} else if rn := newRoom.r.RoomNumber; u.c.RoomNum == rn {
-			if err := g.sendCharacterUpdate(user, u.conn, name, ""); err != nil {
+			if err := g.sendCharacterUpdate(user.c, u.conn, name, ""); err != nil {
 				log.Printf("%s: error when sending character updates to %s", err, name)
 			}
 		}
@@ -448,7 +497,7 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 	return nil
 }
 
-func (g *game) handleFight(fight *lurk.Fight, conn net.Conn, player string) error {
+func (g *game) handleFight(conn net.Conn, player string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	user, ok := g.users[player]
@@ -456,7 +505,48 @@ func (g *game) handleFight(fight *lurk.Fight, conn net.Conn, player string) erro
 		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in fighting", cross.ErrUserNotInServer.Error()))
 	}
 
-	return nil
+	currentRoom := g.rooms[user.c.RoomNum]
+
+	var fights uint16 = 0
+	for _, monster := range g.monsters {
+		if monster.RoomNum != user.c.RoomNum || !monster.Flags[lurk.Alive] {
+			continue
+		}
+		if monster.Name == hiveQueenCocoon {
+			return g.sendError(conn, cross.Other, "If you wish to destroy the next hive queen, you must PVP fight.")
+		}
+
+		g.lastActivity[monster.Name] = time.Now()
+		lurk.CalculateFight(user.c, monster)
+		fights++
+
+		if user.c.Flags[lurk.Alive] {
+			user.c.Gold += monsterGold[monster.Name]
+		}
+		g.startHealTimer(monster)
+		if err := g.sendCharacters(currentRoom, player, conn); err != nil {
+			return err
+		}
+	}
+
+	if fights == 0 {
+		return g.sendError(conn, cross.NoFight, fmt.Sprintf(
+			"No live monsters to fight in the room %v", currentRoom.r.RoomName,
+		))
+	}
+
+	if user.c.Flags[lurk.Alive] {
+		return nil
+	}
+	user.c.Flags[lurk.Alive] = true
+	_, err := conn.Write(lurk.Marshal(&lurk.Message{
+		Recipient: player,
+		Sender:    narrator,
+		Narration: true,
+		Text:      "You have lost in battle. Regenerate your health to fight again.",
+	}))
+
+	return err
 }
 func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string)    {}
 func (g *game) handleLoot(loot *lurk.Loot, player string)           {}
