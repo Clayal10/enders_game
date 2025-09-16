@@ -261,7 +261,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		}
 		err = g.handleChangeRoom(msg, conn, player)
 	case lurk.TypeFight:
-		g.handleFight(conn, player)
+		err = g.handleFight(conn, player)
 	case lurk.TypePVPFight:
 		msg, ok := lm.(*lurk.PVPFight)
 		if !ok {

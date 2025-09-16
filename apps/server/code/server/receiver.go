@@ -107,7 +107,7 @@ func readSingleMessage(conn net.Conn) ([]byte, int, error) {
 
 	b := make([]byte, bytesNeeded-1)
 	n := 0
-	defer conn.SetReadDeadline(time.Time{})
+	defer func() { _ = conn.SetReadDeadline(time.Time{}) }()
 	for n < len(b) {
 		_ = conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		m, err := conn.Read(b)

@@ -278,17 +278,6 @@ func TestServerStartupErrors(t *testing.T) {
 	})
 }
 
-func emptyConnection(conn net.Conn, a *assert.Assert) {
-	for {
-		_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-		_, _, err := readSingleMessage(conn)
-		if err != nil {
-			break
-		}
-	}
-	_ = conn.SetReadDeadline(time.Time{})
-}
-
 func sendLeave(conn net.Conn, a *assert.Assert) {
 	leave := &lurk.Leave{
 		Type: lurk.TypeLeave,
