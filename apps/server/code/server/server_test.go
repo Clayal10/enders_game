@@ -66,8 +66,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		a.True(msg.GetType() == lurk.TypeGame)
 
-		ba, err := lurk.Marshal(char)
-		a.NoError(err)
+		ba := lurk.Marshal(char)
 
 		_, err = conn.Write(ba) // send character
 		a.NoError(err)
@@ -89,20 +88,20 @@ func TestServerFunctionality(t *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester",
-			Attack:     99,
-			Defense:    90,
-			Regen:      80,
-			RoomNum:    2,
+			Attack:     50,
+			Defense:    0,
+			Regen:      10,
+			RoomNum:    1,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
 		conn2 := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester 2",
-			Attack:     99,
-			Defense:    90,
-			Regen:      80,
-			RoomNum:    2,
+			Attack:     50,
+			Defense:    49,
+			Regen:      1,
+			RoomNum:    1,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
@@ -139,10 +138,9 @@ func TestServerFunctionality(t *testing.T) {
 
 		cr := &lurk.ChangeRoom{
 			Type:       lurk.TypeChangeRoom,
-			RoomNumber: paths[0].RoomNumber,
+			RoomNumber: battleSchoolGameRoom,
 		}
-		ba, err := lurk.Marshal(cr)
-		a.NoError(err)
+		ba := lurk.Marshal(cr)
 		_, err = conn.Write(ba)
 		a.NoError(err)
 
@@ -170,11 +168,17 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(len(characters) != 0)
 		a.True(len(paths) != 0)
 
+		//Fight petra
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+		time.Sleep(50 * time.Millisecond)
+		a.True(strings.Contains(buf.String(), "died in a fight"))
+
 		sendLeave(conn, a)
 
 		time.Sleep(50 * time.Millisecond)
 
-		a.True(strings.Contains(buf.String(), "User left."))
+		a.True(strings.Contains(buf.String(), "left."))
 		/* Termination of conn*/
 
 		buffer, _, err = readSingleMessage(conn2)
@@ -186,11 +190,10 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(msg.GetType() == lurk.TypeRoom)
 
 		// Send invalid stuff to server.
-		ba, err = lurk.Marshal(&lurk.Accept{
+		ba = lurk.Marshal(&lurk.Accept{
 			Type:   lurk.TypeAccept,
 			Action: lurk.TypeAccept,
 		})
-		a.NoError(err)
 
 		_, err = conn2.Write(ba)
 		a.NoError(err)
@@ -236,8 +239,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		a.True(msg.GetType() == lurk.TypeGame)
 
-		ba, err := lurk.Marshal(char)
-		a.NoError(err)
+		ba := lurk.Marshal(char)
 
 		ba[0] = 20
 
@@ -280,10 +282,9 @@ func sendLeave(conn net.Conn, a *assert.Assert) {
 	leave := &lurk.Leave{
 		Type: lurk.TypeLeave,
 	}
-	ba, err := lurk.Marshal(leave)
-	a.NoError(err)
+	ba := lurk.Marshal(leave)
 
-	_, err = conn.Write(ba)
+	_, err := conn.Write(ba)
 	a.NoError(err)
 }
 
@@ -328,8 +329,7 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 
 	a.True(msg.GetType() == lurk.TypeGame)
 
-	ba, err := lurk.Marshal(char)
-	a.NoError(err)
+	ba := lurk.Marshal(char)
 
 	_, err = conn.Write(ba) // send character
 	a.NoError(err)
@@ -350,10 +350,9 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 
 	a.True(msg.GetType() == lurk.TypeAccept)
 
-	ba, err = lurk.Marshal(&lurk.Start{
+	ba = lurk.Marshal(&lurk.Start{
 		Type: lurk.TypeStart,
 	})
-	a.NoError(err)
 
 	_, err = conn.Write(ba)
 	a.NoError(err)

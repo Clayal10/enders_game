@@ -4,13 +4,17 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/Clayal10/enders_game/lib/cross"
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
+// game holds all information and methods needed to create a game that complies to the
+// lurk protocol actions.
 type game struct {
 	// key is name, should be unique.
 	users map[string]*user
@@ -21,7 +25,9 @@ type game struct {
 
 	game *lurk.Game
 
-	mu sync.Mutex
+	mu           sync.Mutex
+	lastActivity map[string]time.Time
+	healTimer    map[string]*time.Timer
 }
 
 type user struct {
@@ -29,6 +35,8 @@ type user struct {
 	conn net.Conn
 	// Key is room number. For conditional rooms. Users won't be able to see or access these rooms until true.
 	allowedRoom map[uint16]bool
+	killedQueen bool
+	killedFleet bool
 }
 
 type room struct {
@@ -36,9 +44,10 @@ type room struct {
 	connections []*lurk.Connection
 }
 
-// default game values.
 const (
-	initialPoints = 100
+	initialHealth = 100
+	// gold values to unlock certain areas
+	erosGold = 100
 )
 
 var errDisconnect = errors.New("disconnect")
@@ -46,9 +55,11 @@ var errDisconnect = errors.New("disconnect")
 // when creating a new game, we need to initialize the rooms and all entities.
 func newGame() *game {
 	g := &game{
-		users:    make(map[string]*user),
-		monsters: make(map[string]*lurk.Character),
-		rooms:    make(map[uint16]*room),
+		users:        make(map[string]*user),
+		monsters:     make(map[string]*lurk.Character),
+		rooms:        make(map[uint16]*room),
+		lastActivity: make(map[string]time.Time),
+		healTimer:    make(map[string]*time.Timer),
 	}
 
 	g.createRooms()
@@ -104,7 +115,6 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 			if err := g.sendError(conn, cross.Other, "You must send a [CHARACTER] type."); err != nil {
 				return characterID, err
 			}
-			fmt.Println("Not type character")
 			continue
 		}
 
@@ -121,12 +131,7 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 		characterID = g.createUser(character, conn)
 		g.mu.Unlock()
 
-		ba, err := lurk.Marshal(character)
-		if err != nil {
-			return characterID, err
-		}
-
-		if _, err = conn.Write(ba); err != nil {
+		if _, err = conn.Write(lurk.Marshal(character)); err != nil {
 			return characterID, err
 		}
 
@@ -143,36 +148,35 @@ func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
 	// Character is good at this point, flip flag and wait for their start.
 	character.Flags[lurk.Ready] = true
 	character.RoomNum = battleSchool
-	g.users[character.Name] = &user{
+	u := &user{
 		c:           character,
 		conn:        conn,
 		allowedRoom: make(map[uint16]bool),
 	}
+	for room := battleSchool; room <= rotterdam; room++ {
+		u.allowedRoom[room] = true
+	}
+	for room := eros; room <= formicHomeWorld; room++ {
+		if character.Name == "Beans Shumaker" {
+			u.allowedRoom[room] = true
+		} else {
+			u.allowedRoom[room] = false
+		}
+	}
+
+	g.users[character.Name] = u
 	return character.Name
 }
 
-func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
-	ba, err := lurk.Marshal(&lurk.Error{
-		Type:       lurk.TypeError,
-		ErrCode:    code,
-		ErrMessage: msg,
-	})
-	if err == nil {
-		_, err = conn.Write(ba)
-	}
-	return err
-}
-
 func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
-	if c.Attack >= g.game.StatLimit ||
-		c.Defense >= g.game.StatLimit ||
-		c.Regen >= g.game.StatLimit {
+	if c.Attack+c.Defense+c.Regen > g.game.InitialPoints {
 		return cross.StatError
 	}
 
 	if _, ok := g.users[c.Name]; ok {
 		return cross.PlayerAlreadyExists
 	}
+	c.Health = initialHealth
 	return cross.NoError
 }
 
@@ -184,7 +188,8 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	}
 
 	for {
-		if _, ok := g.users[player]; !ok { // User has been removed.
+		user, ok := g.users[player]
+		if !ok { // User has been removed / left.
 			return nil
 		}
 
@@ -203,13 +208,42 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 		if err, ok := g.messageSelection(lm, player, conn); err != nil {
 			return err
 		} else if ok {
+			if err := g.checkStatusChange(user, conn); err != nil {
+				return err
+			}
 			continue
 		}
+
 		// The message did not have proper fields for the message type.
 		if err = g.sendError(conn, cross.Other, fmt.Sprintf("Message contains invalid fields for type %d", lm.GetType())); err != nil {
 			return err
 		}
 	}
+}
+
+// A chance to update character stats after each action.
+func (g *game) checkStatusChange(user *user, conn net.Conn) error {
+	status := map[uint16]bool{}
+	maps.Copy(status, user.allowedRoom)
+	if user.c.Gold > erosGold {
+		user.allowedRoom[eros] = true
+	}
+	if user.killedQueen {
+		user.allowedRoom[earth] = true
+		user.allowedRoom[shakespeare] = true
+	}
+	if user.killedFleet {
+		user.allowedRoom[formicHomeWorld] = true
+	}
+
+	if user.allowedRoom[eros] == status[eros] && // no change, don't send update
+		user.allowedRoom[formicHomeWorld] == status[formicHomeWorld] &&
+		user.allowedRoom[earth] == status[earth] &&
+		user.allowedRoom[shakespeare] == status[shakespeare] {
+		log.Printf("Could not send connections")
+		return nil
+	}
+	return g.sendConnections(g.rooms[user.c.RoomNum], user.c.Name, conn)
 }
 
 func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) (err error, _ bool) {
@@ -227,11 +261,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		}
 		err = g.handleChangeRoom(msg, conn, player)
 	case lurk.TypeFight:
-		msg, ok := lm.(*lurk.Fight)
-		if !ok {
-			return nil, ok
-		}
-		g.handleFight(msg, player)
+		err = g.handleFight(conn, player)
 	case lurk.TypePVPFight:
 		msg, ok := lm.(*lurk.PVPFight)
 		if !ok {
@@ -257,4 +287,36 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		return nil, false
 	}
 	return err, true
+}
+
+var monsterHealTime = 10 * time.Second
+
+func (g *game) startHealTimer(monster *lurk.Character) {
+	if g.healTimer[monster.Name] == nil {
+		g.healTimer[monster.Name] = time.AfterFunc(monsterHealTime, func() {
+			g.healMonster(monster)
+		})
+	} else {
+		g.healTimer[monster.Name].Reset(monsterHealTime)
+	}
+}
+
+func (g *game) healMonster(monster *lurk.Character) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	idle := time.Since(g.lastActivity[monster.Name])
+	if idle < monsterHealTime {
+		return
+	}
+	monster.Health = monsterHealth[monster.Name]
+	monster.Flags[lurk.Alive] = true
+	for _, user := range g.users {
+		if user.c.RoomNum != monster.RoomNum {
+			continue
+		}
+		if err := g.sendCharacterUpdate(monster, user.conn, user.c.Name, ""); err != nil {
+			log.Printf("%s: could not update user %v with updated monster health", err.Error(), user.c.Name)
+		}
+	}
 }

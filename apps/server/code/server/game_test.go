@@ -34,12 +34,11 @@ func TestReadAll(t *testing.T) {
 				case <-ctx.Done():
 					return
 				case <-t.C:
-					ba, err := lurk.Marshal(&lurk.Character{ // should overflow the 128 default buffer
+					ba := lurk.Marshal(&lurk.Character{ // should overflow the 128 default buffer
 						Type:       lurk.TypeCharacter,
 						Name:       "Verryyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy long name",
 						PlayerDesc: gameDescription + gameDescription + gameDescription,
 					})
-					a.NoError(err)
 					n, err := c.Write(ba)
 					a.NoError(err)
 					a.True(n > bufferLength)
