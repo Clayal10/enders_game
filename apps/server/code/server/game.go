@@ -240,7 +240,6 @@ func (g *game) checkStatusChange(user *user, conn net.Conn) error {
 		user.allowedRoom[formicHomeWorld] == status[formicHomeWorld] &&
 		user.allowedRoom[earth] == status[earth] &&
 		user.allowedRoom[shakespeare] == status[shakespeare] {
-		log.Printf("Could not send connections")
 		return nil
 	}
 	return g.sendConnections(g.rooms[user.c.RoomNum], user.c.Name, conn)
@@ -253,7 +252,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		g.handleMessage(msg, player)
+		err = g.handleMessage(msg, conn, player)
 	case lurk.TypeChangeRoom:
 		msg, ok := lm.(*lurk.ChangeRoom)
 		if !ok {
@@ -274,12 +273,6 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 			return nil, ok
 		}
 		g.handleLoot(msg, player)
-	case lurk.TypeCharacter:
-		msg, ok := lm.(*lurk.Character)
-		if !ok {
-			return nil, ok
-		}
-		g.handleCharacter(msg, player)
 	case lurk.TypeLeave:
 		g.handleLeave(player)
 		return errDisconnect, false

@@ -52,13 +52,7 @@ var LengthOffset = map[MessageType]int{
 const (
 	maxStringLen = 32
 	// length of variable length messages  before their text.
-	messageLength    = 67
-	errorLength      = 4
-	roomLength       = 37
-	characterLength  = 48
-	connectionLength = 37
-	versionLength    = 5
-	gameLength       = 7
+	messageLength = 67
 )
 
 // Exported character flags
@@ -128,7 +122,6 @@ func Unmarshal(data []byte) (LurkMessage, error) {
 	if err := validate(data); err != nil {
 		return nil, err
 	}
-
 	// Various unmarshaling and returning of their respective types.
 	switch MessageType(data[0]) {
 	case TypeMessage:

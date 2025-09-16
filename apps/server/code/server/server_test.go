@@ -88,10 +88,11 @@ func TestServerFunctionality(t *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester",
-			Attack:     50,
+			Attack:     1,
 			Defense:    0,
-			Regen:      10,
+			Regen:      0,
 			RoomNum:    1,
+			Flags:      map[string]bool{lurk.Alive: true},
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
@@ -102,6 +103,7 @@ func TestServerFunctionality(t *testing.T) {
 			Defense:    49,
 			Regen:      1,
 			RoomNum:    1,
+			Flags:      map[string]bool{lurk.Alive: true},
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
@@ -138,7 +140,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		cr := &lurk.ChangeRoom{
 			Type:       lurk.TypeChangeRoom,
-			RoomNumber: battleSchoolGameRoom,
+			RoomNumber: battleSchoolBattleRoom,
 		}
 		ba := lurk.Marshal(cr)
 		_, err = conn.Write(ba)
@@ -168,19 +170,6 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(len(characters) != 0)
 		a.True(len(paths) != 0)
 
-		//Fight petra
-		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
-		a.NoError(err)
-		time.Sleep(50 * time.Millisecond)
-		a.True(strings.Contains(buf.String(), "died in a fight"))
-
-		sendLeave(conn, a)
-
-		time.Sleep(50 * time.Millisecond)
-
-		a.True(strings.Contains(buf.String(), "left."))
-		/* Termination of conn*/
-
 		buffer, _, err = readSingleMessage(conn2)
 		a.NoError(err)
 
@@ -188,6 +177,32 @@ func TestServerFunctionality(t *testing.T) {
 		a.NoError(err)
 
 		a.True(msg.GetType() == lurk.TypeRoom)
+
+		// conn2 writes a message to conn 1
+		_, err = conn2.Write(lurk.Marshal(&lurk.Message{
+			Recipient: "Tester",
+			Sender:    "Tester 2",
+			Text:      "Hello!",
+		}))
+		a.NoError(err)
+
+		m := readUntil(a, lurk.TypeMessage, conn)
+		message, ok := m.(*lurk.Message)
+		a.True(ok)
+		a.True(strings.Contains(message.Text, "Hello!"))
+
+		//Fight petra
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+		time.Sleep(50 * time.Millisecond)
+		a.True(strings.Contains(buf.String(), "died in a fight"))
+
+		sendLeave(conn, a)
+		/* Termination of conn*/
+
+		time.Sleep(50 * time.Millisecond)
+
+		a.True(strings.Contains(buf.String(), "left."))
 
 		// Send invalid stuff to server.
 		ba = lurk.Marshal(&lurk.Accept{

@@ -449,7 +449,24 @@ func (g *game) createMonsters() {
 	}
 }
 
-func (g *game) handleMessage(msg *lurk.Message, player string) {}
+const defaultWriteTimeout = time.Second
+
+func (g *game) handleMessage(msg *lurk.Message, conn net.Conn, player string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	recipient, ok := g.users[msg.Recipient]
+	if !ok {
+		return g.sendError(conn, cross.NoTarget, fmt.Sprintf("%v: error in sending message", cross.ErrUserNotInServer.Error()))
+	}
+
+	if err := recipient.conn.SetWriteDeadline(time.Now().Add(defaultWriteTimeout)); err != nil {
+		return err
+	}
+	_, err := recipient.conn.Write(lurk.Marshal(msg))
+	return err
+}
+
 func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, player string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -517,6 +534,10 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in fighting", cross.ErrUserNotInServer.Error()))
 	}
 
+	if !user.c.Flags[lurk.Alive] {
+		return g.sendError(conn, cross.NoFight, player+", you cannot fight when you are dead")
+	}
+
 	currentRoom := g.rooms[user.c.RoomNum]
 
 	var fights uint16 = 0
@@ -544,7 +565,7 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 		}
 
 		g.startHealTimer(monster)
-		if err := g.sendCharacters(currentRoom, player, conn); err != nil {
+		if err := g.sendCharacters(currentRoom, conn); err != nil {
 			return err
 		}
 	}
@@ -569,11 +590,8 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 
 	return err
 }
-func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string) {
-
-}
-func (g *game) handleLoot(loot *lurk.Loot, player string)           {}
-func (g *game) handleCharacter(char *lurk.Character, player string) {}
+func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string) {}
+func (g *game) handleLoot(loot *lurk.Loot, player string)        {}
 func (g *game) handleLeave(player string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
