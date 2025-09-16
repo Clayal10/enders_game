@@ -183,9 +183,12 @@ func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 // An error returned from here results in termination of the client.
 func (g *game) startGameplay(player string, conn net.Conn) error {
 	// First, send the user information on their current room.
+	g.mu.Lock()
 	if err := g.sendRoom(g.rooms[battleSchool], player, conn); err != nil {
+		g.mu.Unlock()
 		return err
 	}
+	g.mu.Unlock()
 
 	for {
 		user, ok := g.users[player]

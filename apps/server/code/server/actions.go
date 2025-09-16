@@ -39,8 +39,6 @@ func (g *game) sendStart(conn net.Conn) error {
 }
 
 func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	if _, err := conn.Write(lurk.Marshal(room.r)); err != nil {
 		return err
 	}
@@ -53,8 +51,6 @@ func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
 }
 
 func (g *game) sendCharacters(room *room, conn net.Conn) (err error) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	// all characters and monsters in that room
 	for _, user := range g.users {
 		// should we include current user?
@@ -81,8 +77,6 @@ func (g *game) sendCharacters(room *room, conn net.Conn) (err error) {
 // The message will be sent if the the recipient isn't allowed to know what room the user is
 // moving to.
 func (g *game) sendCharacterUpdate(user *lurk.Character, conn net.Conn, recipient string, message string) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	ba := lurk.Marshal(user)
 	if _, err := conn.Write(ba); err != nil {
 		return err
@@ -103,8 +97,6 @@ func (g *game) sendCharacterUpdate(user *lurk.Character, conn net.Conn, recipien
 }
 
 func (g *game) sendConnections(room *room, player string, conn net.Conn) (err error) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	for _, connection := range room.connections {
 		if !g.users[player].allowedRoom[connection.RoomNumber] {
 			continue
@@ -117,8 +109,6 @@ func (g *game) sendConnections(room *room, player string, conn net.Conn) (err er
 }
 
 func (g *game) sendAccept(conn net.Conn, action lurk.MessageType) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	accept := &lurk.Accept{
 		Type:   lurk.TypeAccept,
 		Action: action,
@@ -128,8 +118,6 @@ func (g *game) sendAccept(conn net.Conn, action lurk.MessageType) error {
 }
 
 func (g *game) sendError(conn net.Conn, code cross.ErrCode, msg string) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	_, err := conn.Write(lurk.Marshal(&lurk.Error{
 		Type:       lurk.TypeError,
 		ErrCode:    code,
