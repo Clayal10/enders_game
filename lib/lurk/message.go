@@ -254,6 +254,10 @@ func unmarshalMessage(data []byte) (*Message, error) {
 	msgLen := binary.LittleEndian.Uint16(data[offset:])
 	offset += 2
 
+	if len(data) < 67+int(msgLen) {
+		return nil, cross.ErrFrameTooSmall
+	}
+
 	l := getNullTermLen(data[offset:])
 	m.Recipient = string(data[offset : offset+l])
 	offset += maxStringLen
@@ -706,6 +710,9 @@ func unmarshalConnection(data []byte) (*Connection, error) {
 	c.RoomName = string(data[offset : offset+nameLen])
 	offset += maxStringLen
 	descLen := binary.LittleEndian.Uint16(data[offset:])
+	if len(data) < int(37+descLen) {
+		return nil, cross.ErrFrameTooSmall
+	}
 	offset += 2
 	c.RoomDesc = string(data[offset : offset+int(descLen)])
 	return c, nil
