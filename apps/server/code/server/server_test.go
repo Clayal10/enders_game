@@ -66,8 +66,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		a.True(msg.GetType() == lurk.TypeGame)
 
-		ba, err := lurk.Marshal(char)
-		a.NoError(err)
+		ba := lurk.Marshal(char)
 
 		_, err = conn.Write(ba) // send character
 		a.NoError(err)
@@ -82,25 +81,27 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(ok)
 
 		a.True(strings.Contains(e.ErrMessage, "has invalid stats"))
+
+		sendLeave(conn, a)
 	})
 	t.Run("TestBasicGameplay", func(_ *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester",
-			Attack:     99,
-			Defense:    90,
-			Regen:      80,
-			RoomNum:    2,
+			Attack:     50,
+			Defense:    0,
+			Regen:      10,
+			RoomNum:    1,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
 		conn2 := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester 2",
-			Attack:     99,
-			Defense:    90,
-			Regen:      80,
-			RoomNum:    2,
+			Attack:     50,
+			Defense:    49,
+			Regen:      1,
+			RoomNum:    1,
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
@@ -111,19 +112,73 @@ func TestServerFunctionality(t *testing.T) {
 		a.NoError(err)
 
 		a.True(msg.GetType() == lurk.TypeRoom)
-		// Do more assertions and other gameplay here!
-		// Need to read ALL messages
 
-		ba, err := lurk.Marshal(&lurk.Leave{
-			Type: lurk.TypeLeave,
-		})
-		a.NoError(err)
+		paths := []*lurk.Connection{}
+		characters := []*lurk.Character{}
+
+		for {
+			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			buffer, _, err = readSingleMessage(conn)
+			if err != nil {
+				break
+			}
+			msg, err := lurk.Unmarshal(buffer)
+			a.NoError(err)
+			switch msg.GetType() {
+			case lurk.TypeCharacter:
+				characters = append(characters, msg.(*lurk.Character))
+			case lurk.TypeConnection:
+				paths = append(paths, msg.(*lurk.Connection))
+			default:
+				continue
+			}
+		}
+		a.True(len(characters) != 0)
+		a.True(len(paths) != 0)
+
+		cr := &lurk.ChangeRoom{
+			Type:       lurk.TypeChangeRoom,
+			RoomNumber: battleSchoolGameRoom,
+		}
+		ba := lurk.Marshal(cr)
 		_, err = conn.Write(ba)
 		a.NoError(err)
 
+		paths = paths[:0]
+		characters = characters[:0]
+		for {
+			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			buffer, _, err = readSingleMessage(conn)
+			if err != nil {
+				break
+			}
+			msg, err := lurk.Unmarshal(buffer)
+			a.NoError(err)
+			switch msg.GetType() {
+			case lurk.TypeCharacter:
+				// Could battle in the future
+				characters = append(characters, msg.(*lurk.Character))
+			case lurk.TypeConnection:
+				paths = append(paths, msg.(*lurk.Connection))
+			default:
+				continue
+			}
+		}
+
+		a.True(len(characters) != 0)
+		a.True(len(paths) != 0)
+
+		//Fight petra
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+		time.Sleep(50 * time.Millisecond)
+		a.True(strings.Contains(buf.String(), "died in a fight"))
+
+		sendLeave(conn, a)
+
 		time.Sleep(50 * time.Millisecond)
 
-		a.True(strings.Contains(buf.String(), "User left."))
+		a.True(strings.Contains(buf.String(), "left."))
 		/* Termination of conn*/
 
 		buffer, _, err = readSingleMessage(conn2)
@@ -135,11 +190,10 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(msg.GetType() == lurk.TypeRoom)
 
 		// Send invalid stuff to server.
-		ba, err = lurk.Marshal(&lurk.Accept{
+		ba = lurk.Marshal(&lurk.Accept{
 			Type:   lurk.TypeAccept,
 			Action: lurk.TypeAccept,
 		})
-		a.NoError(err)
 
 		_, err = conn2.Write(ba)
 		a.NoError(err)
@@ -152,12 +206,7 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(ok)
 		a.True(strings.Contains(e.ErrMessage, "Message contains invalid fields"))
 
-		ba, err = lurk.Marshal(&lurk.Leave{
-			Type: lurk.TypeLeave,
-		})
-		a.NoError(err)
-		_, err = conn2.Write(ba)
-		a.NoError(err)
+		sendLeave(conn2, a)
 	})
 
 	t.Run("TestInitialMessageErrors", func(_ *testing.T) {
@@ -190,8 +239,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		a.True(msg.GetType() == lurk.TypeGame)
 
-		ba, err := lurk.Marshal(char)
-		a.NoError(err)
+		ba := lurk.Marshal(char)
 
 		ba[0] = 20
 
@@ -204,7 +252,6 @@ func TestServerFunctionality(t *testing.T) {
 		e, ok := errMessage.(*lurk.Error)
 		a.True(ok)
 		a.True(strings.Contains(e.ErrMessage, "Bad message"))
-
 	})
 }
 
@@ -229,6 +276,16 @@ func TestServerStartupErrors(t *testing.T) {
 			cf()
 		}
 	})
+}
+
+func sendLeave(conn net.Conn, a *assert.Assert) {
+	leave := &lurk.Leave{
+		Type: lurk.TypeLeave,
+	}
+	ba := lurk.Marshal(leave)
+
+	_, err := conn.Write(ba)
+	a.NoError(err)
 }
 
 func readUntil(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMessage {
@@ -272,8 +329,7 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 
 	a.True(msg.GetType() == lurk.TypeGame)
 
-	ba, err := lurk.Marshal(char)
-	a.NoError(err)
+	ba := lurk.Marshal(char)
 
 	_, err = conn.Write(ba) // send character
 	a.NoError(err)
@@ -294,10 +350,9 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 
 	a.True(msg.GetType() == lurk.TypeAccept)
 
-	ba, err = lurk.Marshal(&lurk.Start{
+	ba = lurk.Marshal(&lurk.Start{
 		Type: lurk.TypeStart,
 	})
-	a.NoError(err)
 
 	_, err = conn.Write(ba)
 	a.NoError(err)

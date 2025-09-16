@@ -2,7 +2,6 @@ package lurk
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/Clayal10/enders_game/lib/cross"
 )
@@ -166,60 +165,60 @@ func Unmarshal(data []byte) (LurkMessage, error) {
 
 // Marshal Will take any LurkMessage object and return a byte array
 // ready for messaging.
-func Marshal(lm LurkMessage) ([]byte, error) {
+func Marshal(lm LurkMessage) []byte {
 	switch lm.GetType() {
 	case TypeMessage:
 		if msg, ok := lm.(*Message); ok {
-			return marshalMessage(msg), nil
+			return marshalMessage(msg)
 		}
 	case TypeChangeRoom:
 		if cr, ok := lm.(*ChangeRoom); ok {
-			return marshalChangeRoom(cr), nil
+			return marshalChangeRoom(cr)
 		}
 	case TypeFight:
-		return []byte{0x03}, nil
+		return []byte{0x03}
 	case TypePVPFight:
 		if pvp, ok := lm.(*PVPFight); ok {
-			return marshalPVP(pvp), nil
+			return marshalPVP(pvp)
 		}
 	case TypeLoot:
 		if l, ok := lm.(*Loot); ok {
-			return marshalLoot(l), nil
+			return marshalLoot(l)
 		}
 	case TypeStart:
-		return []byte{0x06}, nil
+		return []byte{0x06}
 	case TypeError:
 		if e, ok := lm.(*Error); ok {
-			return marshalError(e), nil
+			return marshalError(e)
 		}
 	case TypeAccept:
 		if a, ok := lm.(*Accept); ok {
-			return marshalAccept(a), nil
+			return marshalAccept(a)
 		}
 	case TypeRoom:
 		if room, ok := lm.(*Room); ok {
-			return marshalRoom(room), nil
+			return marshalRoom(room)
 		}
 	case TypeCharacter:
 		if char, ok := lm.(*Character); ok {
-			return marshalCharacter(char), nil
+			return marshalCharacter(char)
 		}
 	case TypeGame:
 		if game, ok := lm.(*Game); ok {
-			return marshalGame(game), nil
+			return marshalGame(game)
 		}
 	case TypeLeave:
-		return []byte{0xc}, nil
+		return []byte{0xc}
 	case TypeConnection:
 		if conn, ok := lm.(*Connection); ok {
-			return marshalConnection(conn), nil
+			return marshalConnection(conn)
 		}
 	case TypeVersion:
 		if e, ok := lm.(*Version); ok {
-			return marshalVersion(e), nil
+			return marshalVersion(e)
 		}
 	}
-	return nil, cross.ErrInvalidMessageType
+	return nil
 }
 
 func validate(data []byte) error {
@@ -234,14 +233,14 @@ func validate(data []byte) error {
 
 type Message struct {
 	Type      MessageType
-	RName     string // max 32 bytes. All fields noted with bytes are null terminated '\x00'.
-	SName     string // max 30 bytes
+	Recipient string // max 32 bytes. All fields noted with bytes are null terminated '\x00'.
+	Sender    string // max 30 bytes
 	Text      string
 	Narration bool
 }
 
-func (m *Message) GetType() MessageType {
-	return m.Type
+func (*Message) GetType() MessageType {
+	return TypeMessage
 }
 
 func unmarshalMessage(data []byte) (*Message, error) {
@@ -255,11 +254,15 @@ func unmarshalMessage(data []byte) (*Message, error) {
 	msgLen := binary.LittleEndian.Uint16(data[offset:])
 	offset += 2
 
+	if len(data) < 67+int(msgLen) {
+		return nil, cross.ErrFrameTooSmall
+	}
+
 	l := getNullTermLen(data[offset:])
-	m.RName = string(data[offset : offset+l])
+	m.Recipient = string(data[offset : offset+l])
 	offset += maxStringLen
 	l = getNullTermLen(data[offset:])
-	m.SName = string(data[offset : offset+l])
+	m.Sender = string(data[offset : offset+l])
 	offset += maxStringLen - 1
 
 	// Check for narration
@@ -277,13 +280,13 @@ func marshalMessage(msg *Message) []byte {
 	ba := make([]byte, msgLength+messageLength)
 
 	offset := 0
-	ba[offset] = byte(msg.Type)
+	ba[offset] = byte(TypeMessage)
 	offset++
 	binary.LittleEndian.PutUint16(ba[offset:], msgLength)
 	offset += 2
-	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.RName))
+	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.Recipient))
 	offset += maxStringLen
-	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.SName))
+	copy(ba[offset:offset+maxStringLen], getNullTermedString(msg.Sender))
 	offset += maxStringLen - 1
 	ba[offset] = boolToByte(msg.Narration)
 	offset++
@@ -296,8 +299,8 @@ type ChangeRoom struct {
 	RoomNumber uint16
 }
 
-func (cr *ChangeRoom) GetType() MessageType {
-	return cr.Type
+func (*ChangeRoom) GetType() MessageType {
+	return TypeChangeRoom
 }
 
 func unmarshalChangeRoom(data []byte) (*ChangeRoom, error) {
@@ -312,7 +315,7 @@ func unmarshalChangeRoom(data []byte) (*ChangeRoom, error) {
 
 func marshalChangeRoom(cr *ChangeRoom) []byte {
 	ba := make([]byte, 3)
-	ba[0] = byte(cr.Type)
+	ba[0] = byte(TypeChangeRoom)
 	binary.LittleEndian.PutUint16(ba[1:], cr.RoomNumber)
 	return ba
 }
@@ -321,8 +324,8 @@ type Fight struct {
 	Type MessageType
 }
 
-func (f *Fight) GetType() MessageType {
-	return f.Type
+func (*Fight) GetType() MessageType {
+	return TypeFight
 }
 
 type PVPFight struct {
@@ -330,8 +333,8 @@ type PVPFight struct {
 	TargetName string // 32 bytes
 }
 
-func (pvp *PVPFight) GetType() MessageType {
-	return pvp.Type
+func (*PVPFight) GetType() MessageType {
+	return TypePVPFight
 }
 
 func unmarshalPVP(data []byte) (*PVPFight, error) {
@@ -349,7 +352,7 @@ func unmarshalPVP(data []byte) (*PVPFight, error) {
 
 func marshalPVP(pvp *PVPFight) []byte {
 	ba := make([]byte, maxStringLen+1)
-	ba[0] = byte(pvp.Type)
+	ba[0] = byte(TypePVPFight)
 	copy(ba[1:], getNullTermedString(pvp.TargetName))
 	return ba
 }
@@ -360,7 +363,7 @@ type Loot struct {
 }
 
 func (l *Loot) GetType() MessageType {
-	return l.Type
+	return TypeLoot
 }
 
 func unmarshalLoot(data []byte) (*Loot, error) {
@@ -378,7 +381,7 @@ func unmarshalLoot(data []byte) (*Loot, error) {
 
 func marshalLoot(loot *Loot) []byte {
 	ba := make([]byte, maxStringLen+1)
-	ba[0] = byte(loot.Type)
+	ba[0] = byte(TypeLoot)
 	copy(ba[1:], getNullTermedString(loot.TargetName))
 	return ba
 }
@@ -388,7 +391,7 @@ type Start struct {
 }
 
 func (s *Start) GetType() MessageType {
-	return s.Type
+	return TypeStart
 }
 
 type Error struct {
@@ -398,7 +401,7 @@ type Error struct {
 }
 
 func (e *Error) GetType() MessageType {
-	return e.Type
+	return TypeError
 }
 
 func unmarshalError(data []byte) (*Error, error) {
@@ -426,7 +429,7 @@ func unmarshalError(data []byte) (*Error, error) {
 
 func marshalError(e *Error) []byte {
 	ba := make([]byte, 4+len(e.ErrMessage))
-	ba[0] = byte(e.Type)
+	ba[0] = byte(TypeError)
 	ba[1] = byte(e.ErrCode)
 	binary.LittleEndian.PutUint16(ba[2:], uint16(len(e.ErrMessage)))
 	copy(ba[4:], []byte(e.ErrMessage))
@@ -439,12 +442,11 @@ type Accept struct {
 }
 
 func (a *Accept) GetType() MessageType {
-	return a.Type
+	return TypeAccept
 }
 
 func unmarshalAccept(data []byte) (*Accept, error) {
 	if len(data) < 2 {
-		fmt.Println(len(data))
 		return nil, cross.ErrFrameTooSmall
 	}
 	return &Accept{
@@ -455,7 +457,7 @@ func unmarshalAccept(data []byte) (*Accept, error) {
 
 func marshalAccept(a *Accept) []byte {
 	ba := make([]byte, 2)
-	ba[0] = byte(a.Type)
+	ba[0] = byte(TypeAccept)
 	ba[1] = byte(a.Action)
 	return ba
 }
@@ -468,7 +470,7 @@ type Room struct {
 }
 
 func (r *Room) GetType() MessageType {
-	return r.Type
+	return TypeRoom
 }
 
 func unmarshalRoom(data []byte) (*Room, error) {
@@ -498,7 +500,7 @@ func unmarshalRoom(data []byte) (*Room, error) {
 func marshalRoom(room *Room) []byte {
 	ba := make([]byte, 37+len(room.RoomDesc))
 	offset := 0
-	ba[offset] = byte(room.Type)
+	ba[offset] = byte(TypeRoom)
 	offset++
 	binary.LittleEndian.PutUint16(ba[offset:], room.RoomNumber)
 	offset += 2
@@ -512,8 +514,8 @@ func marshalRoom(room *Room) []byte {
 
 type Character struct {
 	Type       MessageType
-	Name       string // 32 bytes
-	Flags      map[string]bool
+	Name       string          // 32 bytes
+	Flags      map[string]bool // Alive, Join, Monster, Started, Ready
 	Attack     uint16
 	Defense    uint16
 	Regen      uint16
@@ -524,7 +526,7 @@ type Character struct {
 }
 
 func (c *Character) GetType() MessageType {
-	return c.Type
+	return TypeCharacter
 }
 
 func unmarshalCharacter(data []byte) (*Character, error) {
@@ -576,7 +578,7 @@ func unmarshalCharacterFlags(data byte) map[string]bool {
 func marshalCharacter(c *Character) []byte {
 	ba := make([]byte, 48+len(c.PlayerDesc))
 	offset := 0
-	ba[offset] = byte(c.Type)
+	ba[offset] = byte(TypeCharacter)
 	offset++
 	copy(ba[offset:], getNullTermedString(c.Name))
 	offset += maxStringLen
@@ -635,7 +637,7 @@ type Game struct {
 }
 
 func (g *Game) GetType() MessageType {
-	return g.Type
+	return TypeGame
 }
 
 func unmarshalGame(data []byte) (*Game, error) {
@@ -664,7 +666,7 @@ func unmarshalGame(data []byte) (*Game, error) {
 func marshalGame(g *Game) []byte {
 	ba := make([]byte, 7+len(g.GameDesc))
 	offset := 0
-	ba[offset] = byte(g.Type)
+	ba[offset] = byte(TypeGame)
 	offset++
 	binary.LittleEndian.PutUint16(ba[offset:], g.InitialPoints)
 	offset += 2
@@ -681,7 +683,7 @@ type Leave struct {
 }
 
 func (l *Leave) GetType() MessageType {
-	return l.Type
+	return TypeLeave
 }
 
 type Connection struct {
@@ -692,7 +694,7 @@ type Connection struct {
 }
 
 func (c *Connection) GetType() MessageType {
-	return c.Type
+	return TypeConnection
 }
 
 func unmarshalConnection(data []byte) (*Connection, error) {
@@ -708,6 +710,9 @@ func unmarshalConnection(data []byte) (*Connection, error) {
 	c.RoomName = string(data[offset : offset+nameLen])
 	offset += maxStringLen
 	descLen := binary.LittleEndian.Uint16(data[offset:])
+	if len(data) < int(37+descLen) {
+		return nil, cross.ErrFrameTooSmall
+	}
 	offset += 2
 	c.RoomDesc = string(data[offset : offset+int(descLen)])
 	return c, nil
@@ -716,7 +721,7 @@ func unmarshalConnection(data []byte) (*Connection, error) {
 func marshalConnection(c *Connection) []byte {
 	ba := make([]byte, 37+len(c.RoomDesc))
 	offset := 0
-	ba[offset] = byte(c.Type)
+	ba[offset] = byte(TypeConnection)
 	offset++
 	binary.LittleEndian.PutUint16(ba[offset:], c.RoomNumber)
 	offset += 2
@@ -736,7 +741,7 @@ type Version struct {
 }
 
 func (v *Version) GetType() MessageType {
-	return v.Type
+	return TypeVersion
 }
 
 func unmarshalVersion(data []byte) (*Version, error) {
@@ -774,7 +779,7 @@ func unmarshalVersion(data []byte) (*Version, error) {
 func marshalVersion(v *Version) []byte {
 	ba := make([]byte, 5) // Only big enough for the size of the list of extensions
 	offset := 0
-	ba[offset] = byte(v.Type)
+	ba[offset] = byte(TypeVersion)
 	offset++
 	ba[offset] = v.Major
 	offset++

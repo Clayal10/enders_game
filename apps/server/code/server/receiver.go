@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -19,14 +20,10 @@ type receiver struct {
 	*game
 }
 
-const (
-	bufferLength = 128 // Should cover most messages.
-)
-
 var terminationTimeout = 2 * time.Second
 
 func newReceiver(cfg *ServerConfig, game *game) (*receiver, error) {
-	address := fmt.Sprintf("localhost:%v", cfg.Port)
+	address := fmt.Sprintf("0.0.0.0:%v", cfg.Port)
 
 	// Won't fail with the preset localhost and "tcp".
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", address)
@@ -76,12 +73,11 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		return
 	}
 
-	if err := rec.startGameplay(player, conn); err != nil {
-		// termination of gameplay
+	if err := rec.startGameplay(player, conn); err != nil && !errors.Is(err, errDisconnect) {
 		log.Printf("%v: error during gameplay", err.Error())
 		return
 	}
-	log.Printf("User left.")
+	log.Printf("%v left.", player)
 	delete(rec.users, player)
 	time.Sleep(terminationTimeout)
 }
@@ -95,10 +91,8 @@ func (rec *receiver) stop() {
 // We want to read exactly the length of the message. This function will do up to 3
 // calls to 'Read' to read exactly one message.
 func readSingleMessage(conn net.Conn) ([]byte, int, error) {
-	// TODO find a way to flush out after an error
 	buffer := make([]byte, 1)
-	_, err := conn.Read(buffer)
-	if err != nil {
+	if _, err := conn.Read(buffer); err != nil {
 		return nil, 0, err
 	}
 
@@ -112,25 +106,38 @@ func readSingleMessage(conn net.Conn) ([]byte, int, error) {
 	}
 
 	b := make([]byte, bytesNeeded-1)
-	_, err = conn.Read(b)
+	n := 0
+	defer func() { _ = conn.SetReadDeadline(time.Time{}) }()
+	for n < len(b) {
+		_ = conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+		m, err := conn.Read(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		buffer = append(buffer, b[:m]...)
+		n += m
+	}
+
+	varLen, err := lurk.GetVariableLength(buffer)
 	if err != nil {
 		return nil, 0, err
 	}
-	buffer = append(buffer, b...)
 
-	n, err := lurk.GetVariableLength(buffer)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if n == -1 {
+	if varLen == -1 {
 		return buffer, bytesNeeded, nil
 	}
 
-	b = make([]byte, n)
-	if _, err = conn.Read(b); err != nil {
-		return nil, 0, err
+	b = make([]byte, varLen)
+	n = 0
+	for n < len(b) {
+		_ = conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+		m, err := conn.Read(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		buffer = append(buffer, b[:m]...)
+		n += m
 	}
-	buffer = append(buffer, b...)
-	return buffer, n + bytesNeeded, nil
+
+	return buffer, varLen + bytesNeeded, nil
 }
