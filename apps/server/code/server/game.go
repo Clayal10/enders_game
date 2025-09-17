@@ -177,7 +177,14 @@ func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 		return cross.PlayerAlreadyExists
 	}
 	c.Health = initialHealth
+	c.Gold = 0
+	c.RoomNum = battleSchool
 	return cross.NoError
+}
+
+func (g *game) notifyNewArrival() error {
+
+	return nil
 }
 
 // An error returned from here results in termination of the client.
@@ -185,6 +192,10 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	// First, send the user information on their current room.
 	g.mu.Lock()
 	if err := g.sendRoom(g.rooms[battleSchool], player, conn); err != nil {
+		g.mu.Unlock()
+		return err
+	}
+	if err := g.notifyNewArrival(); err != nil {
 		g.mu.Unlock()
 		return err
 	}
@@ -255,7 +266,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		err = g.handleMessage(msg, conn, player)
+		err = g.handleMessage(msg, conn)
 	case lurk.TypeChangeRoom:
 		msg, ok := lm.(*lurk.ChangeRoom)
 		if !ok {
@@ -269,7 +280,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		g.handlePVPFight(msg, player)
+		g.handlePVPFight(msg, conn, player)
 	case lurk.TypeLoot:
 		msg, ok := lm.(*lurk.Loot)
 		if !ok {

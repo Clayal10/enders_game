@@ -451,7 +451,7 @@ func (g *game) createMonsters() {
 
 const defaultWriteTimeout = time.Second
 
-func (g *game) handleMessage(msg *lurk.Message, conn net.Conn, player string) error {
+func (g *game) handleMessage(msg *lurk.Message, conn net.Conn) (err error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -463,7 +463,9 @@ func (g *game) handleMessage(msg *lurk.Message, conn net.Conn, player string) er
 	if err := recipient.conn.SetWriteDeadline(time.Now().Add(defaultWriteTimeout)); err != nil {
 		return err
 	}
-	_, err := recipient.conn.Write(lurk.Marshal(msg))
+	if _, err = recipient.conn.Write(lurk.Marshal(msg)); err == nil {
+		log.Printf("%s sent message to %s\n", msg.Sender, msg.Recipient)
+	}
 	return err
 }
 
@@ -590,10 +592,118 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 
 	return err
 }
-func (g *game) handlePVPFight(pvp *lurk.PVPFight, player string) {}
-func (g *game) handleLoot(loot *lurk.Loot, player string)        {}
+
+func (g *game) handleHiveQueenFight(user *user, conn net.Conn) error {
+	hq := g.monsters[hiveQueenCocoon]
+	if user.c.RoomNum != shakespeare {
+		return g.sendError(conn, cross.NoFight, fmt.Sprintf("user %s is not in the same room as you", hq.Name))
+	}
+
+	lurk.CalculateFight(user.c, hq)
+	if !hq.Flags[lurk.Alive] {
+		log.Printf("%s killed the hive queen cocoon\n", user.c.Name)
+		// Add more gameplay here.
+		if _, err := conn.Write(lurk.Marshal(&lurk.Message{
+			Recipient: user.c.Name,
+			Sender:    narrator,
+			Narration: true,
+			Text:      "You have committed true Xenocide.",
+		})); err != nil {
+			return err
+		}
+	}
+	return g.sendCharacters(g.rooms[shakespeare], conn)
+}
+
+func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) (err error) {
+	user, ok := g.users[player]
+	if !ok {
+		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in PVP fighting", cross.ErrUserNotInServer.Error()))
+	}
+
+	if pvp.TargetName == hiveQueenCocoon {
+		return g.handleHiveQueenFight(user, conn)
+	}
+
+	target, ok := g.users[pvp.TargetName]
+	if !ok {
+		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in PVP fighting", cross.ErrUserNotInServer.Error()))
+	}
+
+	if user.c.RoomNum != target.c.RoomNum {
+		return g.sendError(conn, cross.NoFight, fmt.Sprintf("user %s is not in the same room as you", target.c.Name))
+	}
+
+	if !user.c.Flags[lurk.Alive] {
+		return g.sendError(conn, cross.NoFight, player+", you cannot fight when you are dead")
+	}
+	if !target.c.Flags[lurk.Alive] {
+		return g.sendError(conn, cross.NoFight, target.c.Name+" is already dead!")
+	}
+
+	if _, err = target.conn.Write(lurk.Marshal(&lurk.Message{
+		Recipient: target.c.Name,
+		Sender:    narrator,
+		Text:      fmt.Sprintf("You have been engaged in combat by %v!", user.c.Name),
+		Narration: true,
+	})); err != nil {
+		return err
+	}
+
+	lurk.CalculateFight(user.c, target.c)
+
+	if err = g.sendCharacters(g.rooms[user.c.RoomNum], conn); err != nil {
+		return err
+	}
+	if err = g.sendCharacters(g.rooms[target.c.RoomNum], target.conn); err != nil {
+		return err
+	}
+
+	if !user.c.Flags[lurk.Alive] {
+		log.Printf("%v died in a fight", user.c.Name)
+
+		_, err = conn.Write(lurk.Marshal(&lurk.Message{
+			Recipient: player,
+			Sender:    narrator,
+			Narration: true,
+			Text:      "You have lost in battle. Regenerate your health to fight again.",
+		}))
+	}
+
+	if !target.c.Flags[lurk.Alive] {
+		log.Printf("%v died in a fight", target.c.Name)
+
+		_, err = target.conn.Write(lurk.Marshal(&lurk.Message{
+			Recipient: player,
+			Sender:    narrator,
+			Narration: true,
+			Text:      "You have lost in battle. Regenerate your health to fight again.",
+		}))
+	}
+
+	return err
+}
+func (g *game) handleLoot(loot *lurk.Loot, player string) {}
 func (g *game) handleLeave(player string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	delete(g.users, player)
+	defer delete(g.users, player)
+
+	user, ok := g.users[player]
+	if !ok {
+		log.Println("RETURN EARLY")
+		return
+	}
+
+	oldRoom := user.c.RoomNum
+	user.c.RoomNum = 0
+
+	for _, other := range g.users {
+		if other.c.RoomNum != oldRoom {
+			continue
+		}
+		if err := g.sendCharacterUpdate(user.c, other.conn, other.c.Name, fmt.Sprintf("%s left the server!", player)); err != nil {
+			log.Printf("%v: error when updating others of leaving the server", err.Error())
+		}
+	}
 }

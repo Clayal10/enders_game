@@ -53,7 +53,6 @@ func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
 func (g *game) sendCharacters(room *room, conn net.Conn) (err error) {
 	// all characters and monsters in that room
 	for _, user := range g.users {
-		// should we include current user?
 		if user.c.RoomNum != room.r.RoomNumber {
 			continue
 		}
@@ -77,8 +76,7 @@ func (g *game) sendCharacters(room *room, conn net.Conn) (err error) {
 // The message will be sent if the the recipient isn't allowed to know what room the user is
 // moving to.
 func (g *game) sendCharacterUpdate(user *lurk.Character, conn net.Conn, recipient string, message string) error {
-	ba := lurk.Marshal(user)
-	if _, err := conn.Write(ba); err != nil {
+	if _, err := conn.Write(lurk.Marshal(user)); err != nil {
 		return err
 	}
 
