@@ -177,15 +177,42 @@ func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 		return cross.PlayerAlreadyExists
 	}
 	c.Health = initialHealth
+	c.Gold = 0
+	c.RoomNum = battleSchool
 	return cross.NoError
+}
+
+func (g *game) notifyNewArrival(newbie string) error {
+	newUser, ok := g.users[newbie]
+	if !ok {
+		return cross.ErrUserNotInServer
+	}
+
+	for _, otherUser := range g.users {
+		if otherUser.c.RoomNum != battleSchool || otherUser.c.Name == newUser.c.Name {
+			continue
+		}
+		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, "", ""); err != nil {
+			log.Printf("Could not send message to %s", otherUser.c.Name)
+		}
+	}
+
+	return nil
 }
 
 // An error returned from here results in termination of the client.
 func (g *game) startGameplay(player string, conn net.Conn) error {
 	// First, send the user information on their current room.
+	g.mu.Lock()
 	if err := g.sendRoom(g.rooms[battleSchool], player, conn); err != nil {
+		g.mu.Unlock()
 		return err
 	}
+	if err := g.notifyNewArrival(player); err != nil {
+		g.mu.Unlock()
+		return err
+	}
+	g.mu.Unlock()
 
 	for {
 		user, ok := g.users[player]
@@ -240,7 +267,6 @@ func (g *game) checkStatusChange(user *user, conn net.Conn) error {
 		user.allowedRoom[formicHomeWorld] == status[formicHomeWorld] &&
 		user.allowedRoom[earth] == status[earth] &&
 		user.allowedRoom[shakespeare] == status[shakespeare] {
-		log.Printf("Could not send connections")
 		return nil
 	}
 	return g.sendConnections(g.rooms[user.c.RoomNum], user.c.Name, conn)
@@ -253,7 +279,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		g.handleMessage(msg, player)
+		err = g.handleMessage(msg, conn)
 	case lurk.TypeChangeRoom:
 		msg, ok := lm.(*lurk.ChangeRoom)
 		if !ok {
@@ -267,19 +293,13 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		g.handlePVPFight(msg, player)
+		err = g.handlePVPFight(msg, conn, player)
 	case lurk.TypeLoot:
 		msg, ok := lm.(*lurk.Loot)
 		if !ok {
 			return nil, ok
 		}
 		g.handleLoot(msg, player)
-	case lurk.TypeCharacter:
-		msg, ok := lm.(*lurk.Character)
-		if !ok {
-			return nil, ok
-		}
-		g.handleCharacter(msg, player)
 	case lurk.TypeLeave:
 		g.handleLeave(player)
 		return errDisconnect, false

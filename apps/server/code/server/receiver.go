@@ -91,6 +91,7 @@ func (rec *receiver) stop() {
 // We want to read exactly the length of the message. This function will do up to 3
 // calls to 'Read' to read exactly one message.
 func readSingleMessage(conn net.Conn) ([]byte, int, error) {
+	const messageTypePadding = 64
 	buffer := make([]byte, 1)
 	if _, err := conn.Read(buffer); err != nil {
 		return nil, 0, err
@@ -99,6 +100,9 @@ func readSingleMessage(conn net.Conn) ([]byte, int, error) {
 	bytesNeeded, ok := lurk.LengthOffset[lurk.MessageType(buffer[0])]
 	if !ok {
 		return nil, 0, cross.ErrInvalidMessageType
+	}
+	if lurk.MessageType(buffer[0]) == lurk.TypeMessage {
+		bytesNeeded += messageTypePadding
 	}
 
 	if bytesNeeded == 1 {
