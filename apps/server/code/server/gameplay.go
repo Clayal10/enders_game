@@ -691,7 +691,6 @@ func (g *game) handleLeave(player string) {
 
 	user, ok := g.users[player]
 	if !ok {
-		log.Println("RETURN EARLY")
 		return
 	}
 

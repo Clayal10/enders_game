@@ -158,10 +158,25 @@ func TestGameActions(t *testing.T) {
 			return character.Name == "t2" && !character.Flags[lurk.Alive]
 		}, time.Second*100, 20*time.Millisecond)
 
-		_, err = conn1.Write(lurk.Marshal(&lurk.Leave{}))
-		a.NoError(err)
 		_, err = conn2.Write(lurk.Marshal(&lurk.Leave{}))
 		a.NoError(err)
+
+		a.Eventually(func() bool {
+			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn1)
+			a.NoError(err)
+			lmsg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if lmsg.GetType() != lurk.TypeMessage {
+				return false
+			}
+			msg, ok := lmsg.(*lurk.Message)
+			a.True(ok)
+			return msg.Narration && strings.Contains(msg.Text, "t2 left the server!")
+		}, time.Second*100, 20*time.Millisecond)
+		_, err = conn1.Write(lurk.Marshal(&lurk.Leave{}))
+		a.NoError(err)
+
 	})
 	t.Run("TestKillingHiveQueenCocoon", func(_ *testing.T) {
 		port := cross.GetFreePort()
