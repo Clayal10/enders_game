@@ -191,6 +191,8 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(ok)
 		a.True(strings.Contains(message.Text, "Hello!"))
 
+		monsterHealTime = time.Millisecond
+		defer func() { monsterHealTime = 10 * time.Second }()
 		//Fight petra
 		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
 		a.NoError(err)

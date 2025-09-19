@@ -192,8 +192,8 @@ func (g *game) notifyNewArrival(newbie string) error {
 		if otherUser.c.RoomNum != battleSchool || otherUser.c.Name == newUser.c.Name {
 			continue
 		}
-		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, newUser.c.Name, newUser.c.Name+" joined the server!"); err != nil {
-			return err
+		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, "", ""); err != nil {
+			log.Printf("Could not send message to %s", otherUser.c.Name)
 		}
 	}
 
@@ -293,7 +293,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		g.handlePVPFight(msg, conn, player)
+		err = g.handlePVPFight(msg, conn, player)
 	case lurk.TypeLoot:
 		msg, ok := lm.(*lurk.Loot)
 		if !ok {

@@ -76,4 +76,154 @@ func TestGameActions(t *testing.T) {
 			RoomNumber: 100, // doesn't exist.
 		}, c, testName))
 	})
+	t.Run("TestPVPFight", func(_ *testing.T) {
+		port := cross.GetFreePort()
+		cfg := &ServerConfig{
+			Port: port,
+		}
+
+		cfs, err := New(cfg)
+		a.NoError(err)
+		defer func() {
+			for _, cf := range cfs {
+				cf()
+			}
+		}()
+
+		conn1 := startClientConnection(a, cfg, &lurk.Character{
+			Name: "t1",
+			Flags: map[string]bool{
+				lurk.Alive: true,
+			},
+			Attack:     100,
+			Defense:    0,
+			Regen:      0,
+			PlayerDesc: "First Tester",
+		})
+
+		a.Eventually(func() bool {
+			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn1)
+			a.NoError(err)
+			lmsg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if lmsg.GetType() != lurk.TypeCharacter {
+				return false
+			}
+			character, ok := lmsg.(*lurk.Character)
+			a.True(ok)
+			return character.Name == "t1"
+		}, time.Second, 20*time.Millisecond)
+
+		conn2 := startClientConnection(a, cfg, &lurk.Character{
+			Name: "t2",
+			Flags: map[string]bool{
+				lurk.Alive: true,
+			},
+			Attack:     50,
+			Defense:    0,
+			Regen:      0,
+			PlayerDesc: "Second Tester",
+		})
+
+		a.Eventually(func() bool {
+			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn1)
+			a.NoError(err)
+			lmsg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if lmsg.GetType() != lurk.TypeCharacter {
+				return false
+			}
+			character, ok := lmsg.(*lurk.Character)
+			a.True(ok)
+			return character.Name == "t2"
+		}, time.Second, 20*time.Millisecond)
+
+		_, err = conn1.Write(lurk.Marshal(&lurk.PVPFight{
+			TargetName: "t2",
+		}))
+		a.NoError(err)
+		a.Eventually(func() bool {
+			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn1)
+			a.NoError(err)
+			lmsg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if lmsg.GetType() != lurk.TypeCharacter {
+				return false
+			}
+			character, ok := lmsg.(*lurk.Character)
+			a.True(ok)
+			return character.Name == "t2" && !character.Flags[lurk.Alive]
+		}, time.Second*100, 20*time.Millisecond)
+
+		_, err = conn1.Write(lurk.Marshal(&lurk.Leave{}))
+		a.NoError(err)
+		_, err = conn2.Write(lurk.Marshal(&lurk.Leave{}))
+		a.NoError(err)
+	})
+	t.Run("TestKillingHiveQueenCocoon", func(_ *testing.T) {
+		port := cross.GetFreePort()
+		cfg := &ServerConfig{
+			Port: port,
+		}
+
+		cfs, err := New(cfg)
+		a.NoError(err)
+		defer func() {
+			for _, cf := range cfs {
+				cf()
+			}
+		}()
+
+		conn := startClientConnection(a, cfg, &lurk.Character{
+			Name: "Beans Shumaker",
+			Flags: map[string]bool{
+				lurk.Alive: true,
+			},
+			Attack:     100,
+			Defense:    0,
+			Regen:      0,
+			PlayerDesc: "Admin",
+		})
+
+		_, err = conn.Write(lurk.Marshal(&lurk.ChangeRoom{RoomNumber: eros}))
+		a.NoError(err)
+		_, err = conn.Write(lurk.Marshal(&lurk.ChangeRoom{RoomNumber: shakespeare}))
+		a.NoError(err)
+
+		a.Eventually(func() bool {
+			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn)
+			a.NoError(err)
+			lmsg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if lmsg.GetType() != lurk.TypeCharacter {
+				return false
+			}
+			character, ok := lmsg.(*lurk.Character)
+			a.True(ok)
+			return character.Name == hiveQueenCocoon && !character.Flags[lurk.Monster]
+		}, time.Second*100, 20*time.Millisecond)
+
+		_, err = conn.Write(lurk.Marshal(&lurk.PVPFight{
+			TargetName: hiveQueenCocoon,
+		}))
+		a.NoError(err)
+
+		a.Eventually(func() bool {
+			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn)
+			a.NoError(err)
+			lmsg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if lmsg.GetType() != lurk.TypeMessage {
+				return false
+			}
+			msg, ok := lmsg.(*lurk.Message)
+			a.True(ok)
+			return strings.Contains(msg.Text, "Xenocide")
+		}, time.Second*100, 20*time.Millisecond)
+	})
 }
