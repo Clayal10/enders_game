@@ -182,7 +182,20 @@ func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 	return cross.NoError
 }
 
-func (g *game) notifyNewArrival() error {
+func (g *game) notifyNewArrival(newbie string) error {
+	newUser, ok := g.users[newbie]
+	if !ok {
+		return cross.ErrUserNotInServer
+	}
+
+	for _, otherUser := range g.users {
+		if otherUser.c.RoomNum != battleSchool || otherUser.c.Name == newUser.c.Name {
+			continue
+		}
+		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, newUser.c.Name, newUser.c.Name+" joined the server!"); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -195,7 +208,7 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 		g.mu.Unlock()
 		return err
 	}
-	if err := g.notifyNewArrival(); err != nil {
+	if err := g.notifyNewArrival(player); err != nil {
 		g.mu.Unlock()
 		return err
 	}
