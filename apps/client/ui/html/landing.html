@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="/ui/css/landing.css" />
+        <title>Lurk Client</title>
+    </head>
+    <body>
+        <header>
+            <h1 id="header-title">Lurk Client</h1>
+        </header>
+        <main>
+            <div id="input-landing">
+                <form>
+                    <label>Enter a Hostname (default <i>isoptera.lcsc.edu</i>): </label>
+                    <input type="text" id="input-hostname">
+                    <label>Enter a Port: </label>
+                    <input type="text" id="input-port">
+                </form>
+                <button onclick="sendConfig()" id="submit-button">Connect to a Lurk Server</button>
+            </div>
+        </main>
+        <script src="/ui/js/landing.js"></script>
+    </body>
+</html>

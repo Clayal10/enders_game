@@ -220,7 +220,7 @@ func TestGameActions(t *testing.T) {
 			character, ok := lmsg.(*lurk.Character)
 			a.True(ok)
 			return character.Name == hiveQueenCocoon && !character.Flags[lurk.Monster]
-		}, time.Second*100, 20*time.Millisecond)
+		}, time.Second, 20*time.Millisecond)
 
 		_, err = conn.Write(lurk.Marshal(&lurk.PVPFight{
 			TargetName: hiveQueenCocoon,
@@ -239,6 +239,6 @@ func TestGameActions(t *testing.T) {
 			msg, ok := lmsg.(*lurk.Message)
 			a.True(ok)
 			return strings.Contains(msg.Text, "Xenocide")
-		}, time.Second*100, 20*time.Millisecond)
+		}, time.Second, 20*time.Millisecond)
 	})
 }
