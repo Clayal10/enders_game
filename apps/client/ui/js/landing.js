@@ -10,18 +10,21 @@ async function sendConfig(){
             "Port": port.value
         };
 
-        const response = await fetch(setupAPI, {
+        fetch(setupAPI, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
             body: JSON.stringify(cfg)
+        }).then(response => {
+            if(!response.ok){
+                throw new Error("Bad Response");
+            }
+            return response.json()
+        }).then(data => {
+            console.log(data)
         });
-
-        if(!response.ok){
-            throw new Error("Bad Response");
-        }
 
     }catch(e){
         console.error("Could not send config: ", e)

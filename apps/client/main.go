@@ -22,33 +22,51 @@ func main() {
 }
 
 const setupEP = "/lurk-client/setup/"
+const joinEP = "/lurk-client/join"
 
 func registerEndpoints() {
 	http.HandleFunc(setupEP, handleSetup)
+	http.HandleFunc(joinEP, handleJoin)
 }
 
 func handleSetup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		fmt.Printf("Bad Method")
 		return
 	}
 	ba, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Printf("Could not read")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	cfg := &client.ServerConfig{}
 	if err := json.Unmarshal(ba, cfg); err != nil {
-		fmt.Printf("Could not unmarshal")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	client, err := client.Setup(cfg)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	client.Start(cfg)
+	jsonData, err := json.Marshal(client.Game)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if _, err = w.Write(jsonData); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	go client.Start()
+}
+
+func handleJoin(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func serve() error {
