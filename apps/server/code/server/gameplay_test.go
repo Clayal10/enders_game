@@ -31,7 +31,7 @@ func TestGameActions(t *testing.T) {
 					conn, err := l.Accept()
 					_ = conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 					a.NoError(err)
-					ba, _, err := readSingleMessage(conn)
+					ba, _, err := lurk.ReadSingleMessage(conn)
 					a.NoError(err)
 					msg, err := lurk.Unmarshal(ba)
 					a.NoError(err)
@@ -39,7 +39,7 @@ func TestGameActions(t *testing.T) {
 					e := msg.(*lurk.Error)
 					a.True(strings.Contains(e.ErrMessage, cross.ErrUserNotInServer.Error()))
 
-					ba, _, err = readSingleMessage(conn)
+					ba, _, err = lurk.ReadSingleMessage(conn)
 					a.NoError(err)
 					msg, err = lurk.Unmarshal(ba)
 					a.NoError(err)
@@ -103,7 +103,7 @@ func TestGameActions(t *testing.T) {
 
 		a.Eventually(func() bool {
 			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn1)
+			ba, _, err := lurk.ReadSingleMessage(conn1)
 			a.NoError(err)
 			lmsg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
@@ -128,7 +128,7 @@ func TestGameActions(t *testing.T) {
 
 		a.Eventually(func() bool {
 			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn1)
+			ba, _, err := lurk.ReadSingleMessage(conn1)
 			a.NoError(err)
 			lmsg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
@@ -146,7 +146,7 @@ func TestGameActions(t *testing.T) {
 		a.NoError(err)
 		a.Eventually(func() bool {
 			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn1)
+			ba, _, err := lurk.ReadSingleMessage(conn1)
 			a.NoError(err)
 			lmsg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
@@ -163,7 +163,7 @@ func TestGameActions(t *testing.T) {
 
 		a.Eventually(func() bool {
 			_ = conn1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn1)
+			ba, _, err := lurk.ReadSingleMessage(conn1)
 			a.NoError(err)
 			lmsg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
@@ -210,7 +210,7 @@ func TestGameActions(t *testing.T) {
 
 		a.Eventually(func() bool {
 			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn)
+			ba, _, err := lurk.ReadSingleMessage(conn)
 			a.NoError(err)
 			lmsg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
@@ -229,7 +229,7 @@ func TestGameActions(t *testing.T) {
 
 		a.Eventually(func() bool {
 			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn)
+			ba, _, err := lurk.ReadSingleMessage(conn)
 			a.NoError(err)
 			lmsg, err := lurk.Unmarshal(ba)
 			a.NoError(err)

@@ -2,13 +2,10 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <link rel="stylesheet" type="text/css" href="/ui/css/landing.css" />
+        <link rel="stylesheet" type="text/css" href="/ui/css/style.css" />
         <title>Lurk Client</title>
     </head>
     <body>
-        <header>
-            <h1 id="header-title">Lurk Client</h1>
-        </header>
         <main>
             <div id="input-landing">
                 <form>
@@ -19,7 +16,13 @@
                 </form>
                 <button onclick="sendConfig()" id="submit-button">Connect to a Lurk Server</button>
             </div>
+            <div id="game-display">
+                <h1 id="game-title"></h1>
+                <div id="game-info">
+                    <pre id="game-text"></pre>
+                </div>
+            </div>
         </main>
-        <script src="/ui/js/landing.js"></script>
+        <script src="/ui/js/connection.js"></script>
     </body>
 </html>

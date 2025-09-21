@@ -49,7 +49,7 @@ func TestReadAll(t *testing.T) {
 		conn, err := l.Accept()
 		a.NoError(err)
 
-		buffer, n, err := readSingleMessage(conn)
+		buffer, n, err := lurk.ReadSingleMessage(conn)
 		a.NoError(err)
 		a.True(n > bufferLength)
 

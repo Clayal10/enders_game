@@ -1,5 +1,11 @@
 const setupAPI = "/lurk-client/setup/"
+const joinAPI = "/lurk-client/join"
 
+// Sends:
+// - Hostname
+// - Port
+// Receives:
+// - lurk.Game object
 async function sendConfig(){
     try{
         let hostname = document.getElementById("input-hostname");
@@ -23,11 +29,22 @@ async function sendConfig(){
             }
             return response.json()
         }).then(data => {
-            console.log(data)
+            setGamePreview(data)
         });
-
     }catch(e){
         console.error("Could not send config: ", e)
         return
     }
+}
+
+// Set game-title to generic lurk
+// Set game-desc to the description
+function setGamePreview(data){
+    const gameTitle = document.getElementById("game-title");
+    const gameDesc = document.getElementById("game-text");
+
+    gameTitle.innerHTML = "Lurk Server:";
+
+    gameContent = data.GameDesc.replace(/\n/g, '<br>');
+    gameDesc.innerHTML = gameContent;
 }

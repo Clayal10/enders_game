@@ -22,11 +22,9 @@ func main() {
 }
 
 const setupEP = "/lurk-client/setup/"
-const joinEP = "/lurk-client/join"
 
 func registerEndpoints() {
 	http.HandleFunc(setupEP, handleSetup)
-	http.HandleFunc(joinEP, handleJoin)
 }
 
 func handleSetup(w http.ResponseWriter, r *http.Request) {
@@ -63,10 +61,6 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go client.Start()
-}
-
-func handleJoin(w http.ResponseWriter, r *http.Request) {
-
 }
 
 func serve() error {

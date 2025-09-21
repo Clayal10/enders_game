@@ -76,7 +76,7 @@ func (g *game) registerPlayer(conn net.Conn) (string, error) {
 	log.Printf("Added user %v", id)
 
 	for {
-		buffer, _, err := readSingleMessage(conn) // accept START
+		buffer, _, err := lurk.ReadSingleMessage(conn) // accept START
 		if err != nil {
 			return id, err
 		}
@@ -101,7 +101,7 @@ func (g *game) registerPlayer(conn net.Conn) (string, error) {
 func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 	// In this loop, we get the character and send it back after checking the validity of it.
 	for {
-		buffer, n, err := readSingleMessage(conn) // accept CHARACTER
+		buffer, n, err := lurk.ReadSingleMessage(conn) // accept CHARACTER
 		if err != nil {
 			_ = g.sendError(conn, cross.Other, "Bad message, terminating connection.")
 			return characterID, err
@@ -220,7 +220,7 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 			return nil
 		}
 
-		buffer, n, err := readSingleMessage(conn) // accept MESSAGE || CHARACTER || LEAVE
+		buffer, n, err := lurk.ReadSingleMessage(conn) // accept MESSAGE || CHARACTER || LEAVE
 		if err != nil {
 			_ = g.sendError(conn, cross.Other, "Bad message, try again.")
 			return err

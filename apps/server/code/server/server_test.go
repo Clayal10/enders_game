@@ -50,7 +50,7 @@ func TestServerFunctionality(t *testing.T) {
 		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
 		a.NoError(err)
 
-		buffer, n, err := readSingleMessage(conn)
+		buffer, n, err := lurk.ReadSingleMessage(conn)
 		a.NoError(err)
 
 		msg, err := lurk.Unmarshal(buffer[:n])
@@ -58,7 +58,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		a.True(msg.GetType() == lurk.TypeVersion)
 
-		buffer, n, err = readSingleMessage(conn)
+		buffer, n, err = lurk.ReadSingleMessage(conn)
 		a.NoError(err)
 
 		msg, err = lurk.Unmarshal(buffer[:n])
@@ -71,7 +71,7 @@ func TestServerFunctionality(t *testing.T) {
 		_, err = conn.Write(ba) // send character
 		a.NoError(err)
 
-		buffer, _, err = readSingleMessage(conn) // read error
+		buffer, _, err = lurk.ReadSingleMessage(conn) // read error
 		a.NoError(err)
 
 		msg, err = lurk.Unmarshal(buffer)
@@ -107,7 +107,7 @@ func TestServerFunctionality(t *testing.T) {
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
-		buffer, _, err := readSingleMessage(conn) // read the 'room'
+		buffer, _, err := lurk.ReadSingleMessage(conn) // read the 'room'
 		a.NoError(err)
 
 		msg, err := lurk.Unmarshal(buffer)
@@ -120,7 +120,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		for {
 			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-			buffer, _, err = readSingleMessage(conn)
+			buffer, _, err = lurk.ReadSingleMessage(conn)
 			if err != nil {
 				break
 			}
@@ -150,7 +150,7 @@ func TestServerFunctionality(t *testing.T) {
 		characters = characters[:0]
 		for {
 			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-			buffer, _, err = readSingleMessage(conn)
+			buffer, _, err = lurk.ReadSingleMessage(conn)
 			if err != nil {
 				break
 			}
@@ -170,7 +170,7 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(len(characters) != 0)
 		a.True(len(paths) != 0)
 
-		buffer, _, err = readSingleMessage(conn2)
+		buffer, _, err = lurk.ReadSingleMessage(conn2)
 		a.NoError(err)
 
 		msg, err = lurk.Unmarshal(buffer)
@@ -240,7 +240,7 @@ func TestServerFunctionality(t *testing.T) {
 		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
 		a.NoError(err)
 
-		buffer, n, err := readSingleMessage(conn)
+		buffer, n, err := lurk.ReadSingleMessage(conn)
 		a.NoError(err)
 
 		msg, err := lurk.Unmarshal(buffer[:n])
@@ -248,7 +248,7 @@ func TestServerFunctionality(t *testing.T) {
 
 		a.True(msg.GetType() == lurk.TypeVersion)
 
-		buffer, n, err = readSingleMessage(conn)
+		buffer, n, err = lurk.ReadSingleMessage(conn)
 		a.NoError(err)
 
 		msg, err = lurk.Unmarshal(buffer[:n])
@@ -308,7 +308,7 @@ func sendLeave(conn net.Conn, a *assert.Assert) {
 func readUntil(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMessage {
 	_ = conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
 	for {
-		buffer, _, err := readSingleMessage(conn)
+		buffer, _, err := lurk.ReadSingleMessage(conn)
 		if err != nil {
 			if errors.Is(err, cross.ErrInvalidMessageType) {
 				continue
@@ -330,7 +330,7 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 	conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
 	a.NoError(err)
 
-	buffer, n, err := readSingleMessage(conn)
+	buffer, n, err := lurk.ReadSingleMessage(conn)
 	a.NoError(err)
 
 	msg, err := lurk.Unmarshal(buffer[:n])
@@ -338,7 +338,7 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 
 	a.True(msg.GetType() == lurk.TypeVersion)
 
-	buffer, n, err = readSingleMessage(conn)
+	buffer, n, err = lurk.ReadSingleMessage(conn)
 	a.NoError(err)
 
 	msg, err = lurk.Unmarshal(buffer[:n])
@@ -351,7 +351,7 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 	_, err = conn.Write(ba) // send character
 	a.NoError(err)
 
-	buffer, n, err = readSingleMessage(conn)
+	buffer, n, err = lurk.ReadSingleMessage(conn)
 	a.NoError(err)
 
 	msg, err = lurk.Unmarshal(buffer[:n])
@@ -359,7 +359,7 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 
 	a.True(msg.GetType() == lurk.TypeCharacter)
 
-	buffer, n, err = readSingleMessage(conn) // read accept
+	buffer, n, err = lurk.ReadSingleMessage(conn) // read accept
 	a.NoError(err)
 
 	msg, err = lurk.Unmarshal(buffer[:n])
@@ -374,7 +374,7 @@ func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Chara
 	_, err = conn.Write(ba)
 	a.NoError(err)
 
-	buffer, _, err = readSingleMessage(conn)
+	buffer, _, err = lurk.ReadSingleMessage(conn)
 	a.NoError(err)
 
 	a.True(buffer[0] == byte(lurk.TypeAccept))
