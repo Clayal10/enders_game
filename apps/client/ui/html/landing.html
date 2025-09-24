@@ -17,9 +17,13 @@
                 <button onclick="sendConfig()" id="submit-button">Connect to a Lurk Server</button>
             </div>
             <div id="game-display">
-                <h1 id="game-title"></h1>
                 <div id="game-info">
+                    <pre id="game-players"></pre>
                     <pre id="game-text"></pre>
+                    <pre id="game-rooms"></pre>
+                </div>
+                <div id="game-input">
+                    <button onclick="sendStart()">Start</button>
                 </div>
             </div>
         </main>
