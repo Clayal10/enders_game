@@ -71,6 +71,8 @@ function updateGame(data){
     const gamePlayers = document.getElementById("game-players");
     const gameRooms = document.getElementById("game-rooms");
 
+    console.log(data.id);
+
     gameDesc.innerHTML += data.info.replace(/\n/g, '<br>');
     gamePlayers.innerHTML += data.players.replace(/\n/g, '<br>');
     gameRooms.innerHTML += data.rooms.replace(/\n/g, '<br>');

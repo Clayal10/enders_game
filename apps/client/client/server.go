@@ -1,11 +1,8 @@
 package client
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -16,11 +13,6 @@ import (
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
-type ServerConfig struct {
-	Hostname string
-	Port     string
-}
-
 // Each field correlates to a section of the UI that should be updated in the JS.
 // This struct will be json'd and each field should be added to the innerHTML of the HTML element,
 // and should not overwrite the data already in it.
@@ -28,6 +20,7 @@ type ClientUpdate struct {
 	Info    string `json:"info"`
 	Rooms   string `json:"rooms"`
 	Players string `json:"players"`
+	Id      int64  `json:"id"`
 }
 
 // Client contains all data needed to run a client instance.
@@ -35,94 +28,20 @@ type Client struct {
 	// Message queue?
 
 	Game *lurk.Game
+	id   int64
 
 	mu   sync.Mutex
 	conn net.Conn
 }
 
-const defaultPort = 5068
-const staticDir = "./ui" // exe must be in root of repo
-
-func Start() error {
-	registerEndpoints()
-	return serve()
+type Config struct {
+	Hostname, Port string
 }
 
-const setupEP = "/lurk-client/setup/"
-const startEP = "/lurk-client/start/" // For now, this will just auto fill with default stuff.
+const startEP = "/lurk-client/start/"
 const updateEP = "/lurk-client/update/"
 
-func registerEndpoints() {
-	http.HandleFunc(setupEP, handleSetup)
-	http.HandleFunc(startEP, handleStart)
-}
-
-func handleSetup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		return
-	}
-	ba, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	cfg := &ServerConfig{}
-	if err := json.Unmarshal(ba, cfg); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	_, clientUpdate, err := setup(cfg)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	jsonData, err := json.Marshal(clientUpdate)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if _, err = w.Write(jsonData); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-}
-
-func handleStart(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		return
-	}
-}
-
-func serve() error {
-	http.HandleFunc("/", mainPageHandler)
-	fs := http.FileServer(http.Dir(staticDir))
-	http.Handle("/ui/", http.StripPrefix("/ui/", fs))
-
-	return http.ListenAndServe(fmt.Sprintf(":%v", defaultPort), nil)
-}
-
-func mainPageHandler(w http.ResponseWriter, req *http.Request) {
-	template, err := template.ParseFiles(fmt.Sprintf("%v/html/landing.html", staticDir))
-	if err != nil {
-		log.Printf("%v: could not parse HTML file", err)
-		return
-	}
-
-	if err = template.Execute(w, nil); err != nil {
-		log.Printf("%v: could not execute HTML file", err)
-		return
-	}
-}
-
-func setup(cfg *ServerConfig) (*Client, *ClientUpdate, error) {
-	return connectToServer(cfg)
-}
-
-func connectToServer(cfg *ServerConfig) (*Client, *ClientUpdate, error) {
+func New(cfg *Config) (*Client, *ClientUpdate, error) {
 	conn, err := net.Dial("tcp", cfg.Hostname+":"+cfg.Port)
 	if err != nil {
 		return nil, nil, err
@@ -153,6 +72,7 @@ func connectToServer(cfg *ServerConfig) (*Client, *ClientUpdate, error) {
 
 	c := &Client{
 		conn: conn,
+		id:   time.Now().UnixNano(),
 	}
 
 	cu := c.getClientUpdate(lurkMessages)
@@ -160,8 +80,15 @@ func connectToServer(cfg *ServerConfig) (*Client, *ClientUpdate, error) {
 	return c, cu, nil
 }
 
+func (c *Client) Start() error {
+	c.registerEndpoints()
+	return nil
+}
+
 func (client *Client) getClientUpdate(lurkMessages []lurk.LurkMessage) *ClientUpdate {
-	cu := &ClientUpdate{}
+	cu := &ClientUpdate{
+		Id: client.id,
+	}
 	for _, msg := range lurkMessages {
 		switch msg.GetType() {
 		case lurk.TypeGame:
@@ -182,3 +109,10 @@ func (client *Client) getClientUpdate(lurkMessages []lurk.LurkMessage) *ClientUp
 	}
 	return cu
 }
+
+func (c *Client) registerEndpoints() {
+	http.HandleFunc(fmt.Sprintf("%s%d/", startEP, c.id), handleStart)
+	log.Printf("Registered endpoints for ID:%d", c.id)
+}
+
+func handleStart(w http.ResponseWriter, r *http.Request) {}

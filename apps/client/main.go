@@ -1,13 +1,84 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"io"
 	"log"
+	"net/http"
 
 	"github.com/Clayal10/enders_game/apps/client/client"
 )
 
+const setupEP = "/lurk-client/setup/"
+
+const defaultPort = 5068
+const staticDir = "./ui" // exe must be in root of repo
+
 func main() {
-	if err := client.Start(); err != nil {
-		log.Fatal(err)
+	http.HandleFunc(setupEP, handleSetup)
+	serve()
+}
+
+func mainPageHandler(w http.ResponseWriter, req *http.Request) {
+	template, err := template.ParseFiles(fmt.Sprintf("%v/html/landing.html", staticDir))
+	if err != nil {
+		log.Printf("%v: could not parse HTML file", err)
+		return
 	}
+
+	if err = template.Execute(w, nil); err != nil {
+		log.Printf("%v: could not execute HTML file", err)
+		return
+	}
+}
+
+func handleSetup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		return
+	}
+	ba, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	cfg := &client.Config{}
+	if err := json.Unmarshal(ba, cfg); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	c, clientUpdate, err := client.New(cfg)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	jsonData, err := json.Marshal(clientUpdate)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	if _, err = w.Write(jsonData); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		return
+	}
+
+	go c.Start()
+}
+
+func serve() error {
+	http.HandleFunc("/", mainPageHandler)
+	fs := http.FileServer(http.Dir(staticDir))
+	http.Handle("/ui/", http.StripPrefix("/ui/", fs))
+
+	return http.ListenAndServe(fmt.Sprintf(":%v", defaultPort), nil)
 }
