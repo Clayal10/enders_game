@@ -98,3 +98,7 @@ button:hover{
     width: 25%;
     white-space: pre-wrap;
 }
+
+#text-input{
+    color: #00316e;
+}

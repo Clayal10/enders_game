@@ -1,13 +1,8 @@
 package client
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net"
-	"net/http"
-	"os"
-	"sync"
 	"time"
 
 	"github.com/Clayal10/enders_game/lib/lurk"
@@ -25,21 +20,18 @@ type ClientUpdate struct {
 
 // Client contains all data needed to run a client instance.
 type Client struct {
-	// Message queue?
-
 	Game *lurk.Game
-	id   int64
 
-	mu   sync.Mutex
+	id int64
+
+	//mu   sync.Mutex
 	conn net.Conn
+	q    chan lurk.LurkMessage
 }
 
 type Config struct {
 	Hostname, Port string
 }
-
-const startEP = "/lurk-client/start/"
-const updateEP = "/lurk-client/update/"
 
 func New(cfg *Config) (*Client, *ClientUpdate, error) {
 	conn, err := net.Dial("tcp", cfg.Hostname+":"+cfg.Port)
@@ -47,32 +39,15 @@ func New(cfg *Config) (*Client, *ClientUpdate, error) {
 		return nil, nil, err
 	}
 
-	lurkMessages, err := func(conn net.Conn) (messages []lurk.LurkMessage, _ error) {
-		for {
-			conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-			ba, _, err := lurk.ReadSingleMessage(conn)
-			if err != nil {
-				if errors.Is(err, os.ErrDeadlineExceeded) {
-					return messages, nil
-				}
-				return nil, err
-			}
-
-			lmsg, err := lurk.Unmarshal(ba)
-			if err != nil {
-				return nil, err
-			}
-
-			messages = append(messages, lmsg)
-		}
-	}(conn)
+	lurkMessages, err := readAllMessagesInBuffer(conn)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	c := &Client{
 		conn: conn,
-		id:   time.Now().UnixNano(),
+		id:   time.Now().UnixMicro(),
+		q:    make(chan lurk.LurkMessage, 100),
 	}
 
 	cu := c.getClientUpdate(lurkMessages)
@@ -82,37 +57,12 @@ func New(cfg *Config) (*Client, *ClientUpdate, error) {
 
 func (c *Client) Start() error {
 	c.registerEndpoints()
-	return nil
-}
-
-func (client *Client) getClientUpdate(lurkMessages []lurk.LurkMessage) *ClientUpdate {
-	cu := &ClientUpdate{
-		Id: client.id,
-	}
-	for _, msg := range lurkMessages {
-		switch msg.GetType() {
-		case lurk.TypeGame:
-			game := msg.(*lurk.Game)
-			client.Game = game
-			cu.Info += fmt.Sprintf("Stat Limit: %v\nInitial Points: %v\n%s\n", game.StatLimit, game.InitialPoints, game.GameDesc)
-		case lurk.TypeVersion:
-			version := msg.(*lurk.Version)
-			extensionBytes := 0
-			for _, v := range version.Extensions {
-				extensionBytes += len(v)
-			}
-			cu.Info += fmt.Sprintf("LURK Version %v.%v | %v Bytes of Extensions\n", version.Major, version.Minor, extensionBytes)
-		case lurk.TypeCharacter:
-			character := msg.(*lurk.Character)
-			cu.Players += fmt.Sprintf("%s | Attack: %v Defense: %v Health: %v Monster?: %v\n", character.Name, character.Attack, character.Defense, character.Health, character.Flags[lurk.Monster])
-		}
-	}
-	return cu
+	return c.readFromServer()
 }
 
 func (c *Client) registerEndpoints() {
-	http.HandleFunc(fmt.Sprintf("%s%d/", startEP, c.id), handleStart)
+	c.registerStartEP()
+	c.registerUpdateEP()
+	// register more.
 	log.Printf("Registered endpoints for ID:%d", c.id)
 }
-
-func handleStart(w http.ResponseWriter, r *http.Request) {}

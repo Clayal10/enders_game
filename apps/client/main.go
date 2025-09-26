@@ -21,19 +21,6 @@ func main() {
 	serve()
 }
 
-func mainPageHandler(w http.ResponseWriter, req *http.Request) {
-	template, err := template.ParseFiles(fmt.Sprintf("%v/html/landing.html", staticDir))
-	if err != nil {
-		log.Printf("%v: could not parse HTML file", err)
-		return
-	}
-
-	if err = template.Execute(w, nil); err != nil {
-		log.Printf("%v: could not execute HTML file", err)
-		return
-	}
-}
-
 func handleSetup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		return
@@ -81,4 +68,17 @@ func serve() error {
 	http.Handle("/ui/", http.StripPrefix("/ui/", fs))
 
 	return http.ListenAndServe(fmt.Sprintf(":%v", defaultPort), nil)
+}
+
+func mainPageHandler(w http.ResponseWriter, req *http.Request) {
+	template, err := template.ParseFiles(fmt.Sprintf("%v/html/home.html", staticDir))
+	if err != nil {
+		log.Printf("%v: could not parse HTML file", err)
+		return
+	}
+
+	if err = template.Execute(w, nil); err != nil {
+		log.Printf("%v: could not execute HTML file", err)
+		return
+	}
 }
