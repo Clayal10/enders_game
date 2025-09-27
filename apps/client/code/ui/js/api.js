@@ -2,16 +2,25 @@ const setupAPI = "/lurk-client/setup/"
 // These require IDs
 const startAPI = "/lurk-client/start"
 const updateAPI = "/lurk-client/update"
+const terminateAPI = "/lurk-client/terminate"
 
 class Client{
     constructor(id){
         this.id = id;
-        this.startAPI = startAPI+"/"+id+"/"
-        this.updateAPI = updateAPI+"/"+id+"/"
+        this.startAPI = startAPI+"/"+id+"/";
+        this.updateAPI = updateAPI+"/"+id+"/";
+        this.terminateAPI = terminateAPI+"/"+id+"/";
     };
 };
 
 var client;
+
+window.addEventListener('beforeunload', (event) => {
+  if (client.id === 0){
+    return
+  }
+  navigator.sendBeacon(client.terminateAPI);
+});
 
 // Sends:
 // - Hostname
@@ -20,7 +29,6 @@ var client;
 // - Client Update object:
 //  - info | general info about the game
 //  - players | Already string formatted player / monster list
-//  - 
 function sendConfig(){
     try{
         let hostname = document.getElementById("input-hostname");
@@ -95,7 +103,7 @@ async function pollUpdateEP(){
     }catch(e){
         console.error("Could not poll endpoint: ", e);
     }finally{
-        setTimeout(pollUpdateEP, 2000);
+        setTimeout(pollUpdateEP, 10);
     }
 }
 

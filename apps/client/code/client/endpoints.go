@@ -20,14 +20,16 @@ func (c *Client) registerStartEP() {
 			log.Println("Huh")
 			return
 		}
-		_, err := c.conn.Write(lurk.Marshal(&lurk.Character{
+
+		c.character = &lurk.Character{
 			Type: lurk.TypeCharacter,
 			Name: fmt.Sprintf("Test Client %d", c.id),
 			Flags: map[string]bool{
 				lurk.Ready: true,
 			},
 			PlayerDesc: "Test Character",
-		}))
+		}
+		_, err := c.conn.Write(lurk.Marshal(c.character))
 		if err != nil {
 			log.Printf("%s: could not write Character to server", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -50,7 +52,6 @@ const updateEP = "/lurk-client/update/"
 func (c *Client) registerUpdateEP() {
 	http.HandleFunc(fmt.Sprintf("%s%d/", updateEP, c.id), func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			log.Println("What")
 			return
 		}
 
@@ -67,12 +68,28 @@ func (c *Client) registerUpdateEP() {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
 		_, err = w.Write(jsonString)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+	})
+}
+
+const terminateEP = "/lurk-client/terminate/"
+
+func (c *Client) registerTerminateEP() {
+	http.HandleFunc(fmt.Sprintf("%s%d/", terminateEP, c.id), func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			return
+		}
+
+		_, err := c.conn.Write(lurk.Marshal(&lurk.Leave{}))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		w.WriteHeader(http.StatusOK)
+		log.Printf("ID:%v terminated from client", c.id)
+		c.cf()
 	})
 }

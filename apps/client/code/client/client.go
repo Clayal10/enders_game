@@ -12,11 +12,16 @@ import (
 
 // This function enqueues messages into the message queue to be returned
 // as HTTP responses to the UI.
-func (c *Client) readFromServer() (err error) {
+func (c *Client) readFromServer() {
 	var ba []byte
 	var lurkMessage lurk.LurkMessage
+	var err error
 	for {
-		log.Println("Here")
+		select {
+		case <-c.ctx.Done():
+			return
+		default:
+		}
 		if ba, _, err = lurk.ReadSingleMessage(c.conn); err != nil {
 			break
 		}
@@ -27,7 +32,6 @@ func (c *Client) readFromServer() (err error) {
 		log.Printf("Got type %v from server", lurkMessage.GetType())
 		c.q <- lurkMessage
 	}
-	return err
 }
 
 func (c *Client) timeoutChannelRead() lurk.LurkMessage {
@@ -35,7 +39,7 @@ func (c *Client) timeoutChannelRead() lurk.LurkMessage {
 		select {
 		case msg := <-c.q:
 			return msg
-		case <-time.After(time.Millisecond * 200): // experiment with this
+		case <-time.After(time.Millisecond * 1000): // experiment with this
 			return nil
 		}
 	}
@@ -44,6 +48,9 @@ func (c *Client) timeoutChannelRead() lurk.LurkMessage {
 func readAllMessagesInBuffer(conn net.Conn) (messages []lurk.LurkMessage, _ error) {
 	for {
 		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		defer func() {
+			_ = conn.SetReadDeadline(time.Time{})
+		}()
 		ba, _, err := lurk.ReadSingleMessage(conn)
 		if err != nil {
 			if errors.Is(err, os.ErrDeadlineExceeded) {

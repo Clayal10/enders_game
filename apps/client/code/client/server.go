@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"log"
 	"net"
 	"time"
@@ -20,9 +21,12 @@ type ClientUpdate struct {
 
 // Client contains all data needed to run a client instance.
 type Client struct {
-	Game *lurk.Game
+	Game      *lurk.Game
+	character *lurk.Character
 
-	id int64
+	id  int64
+	ctx context.Context
+	cf  context.CancelFunc
 
 	//mu   sync.Mutex
 	conn net.Conn
@@ -55,14 +59,16 @@ func New(cfg *Config) (*Client, *ClientUpdate, error) {
 	return c, cu, nil
 }
 
-func (c *Client) Start() error {
+func (c *Client) Start() {
 	c.registerEndpoints()
-	return c.readFromServer()
+	c.ctx, c.cf = context.WithCancel(context.Background())
+	go c.readFromServer()
 }
 
 func (c *Client) registerEndpoints() {
 	c.registerStartEP()
 	c.registerUpdateEP()
+	c.registerTerminateEP()
 	// register more.
 	log.Printf("Registered endpoints for ID:%d", c.id)
 }

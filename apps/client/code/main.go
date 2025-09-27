@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Clayal10/enders_game/apps/client/client"
+	"github.com/Clayal10/enders_game/apps/client/code/client"
 )
 
 const setupEP = "/lurk-client/setup/"
@@ -59,7 +59,7 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go c.Start()
+	c.Start()
 }
 
 func serve() error {
