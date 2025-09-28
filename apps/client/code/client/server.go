@@ -12,17 +12,22 @@ import (
 // Each field correlates to a section of the UI that should be updated in the JS.
 // This struct will be json'd and each field should be added to the innerHTML of the HTML element,
 // and should not overwrite the data already in it.
-type ClientUpdate struct {
+type ClientState struct {
 	Info    string `json:"info"`
 	Rooms   string `json:"rooms"`
 	Players string `json:"players"`
 	Id      int64  `json:"id"`
+
+	characters map[string]*lurk.Character
+	rooms      map[uint16]*lurk.Room
+	// connections too.
 }
 
 // Client contains all data needed to run a client instance.
 type Client struct {
 	Game      *lurk.Game
 	character *lurk.Character
+	State     *ClientState
 
 	id  int64
 	ctx context.Context
@@ -37,26 +42,33 @@ type Config struct {
 	Hostname, Port string
 }
 
-func New(cfg *Config) (*Client, *ClientUpdate, error) {
+func New(cfg *Config) (*Client, error) {
 	conn, err := net.Dial("tcp", cfg.Hostname+":"+cfg.Port)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	lurkMessages, err := readAllMessagesInBuffer(conn)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+
+	id := time.Now().UnixMicro()
 
 	c := &Client{
 		conn: conn,
-		id:   time.Now().UnixMicro(),
+		id:   id,
 		q:    make(chan lurk.LurkMessage, 100),
+		State: &ClientState{
+			Id:         id,
+			characters: map[string]*lurk.Character{},
+			rooms:      map[uint16]*lurk.Room{},
+		},
 	}
 
-	cu := c.getClientUpdate(lurkMessages)
+	c.updateClientState(lurkMessages)
 
-	return c, cu, nil
+	return c, nil
 }
 
 func (c *Client) Start() {

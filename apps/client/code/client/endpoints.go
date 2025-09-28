@@ -17,7 +17,6 @@ const startEP = "/lurk-client/start/"
 func (c *Client) registerStartEP() {
 	http.HandleFunc(fmt.Sprintf("%s%d/", startEP, c.id), func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			log.Println("Huh")
 			return
 		}
 
@@ -27,6 +26,7 @@ func (c *Client) registerStartEP() {
 			Flags: map[string]bool{
 				lurk.Ready: true,
 			},
+			RoomNum:    1, // FIX we need to display the character we get from the server, not the one we made.
 			PlayerDesc: "Test Character",
 		}
 		_, err := c.conn.Write(lurk.Marshal(c.character))
@@ -57,13 +57,13 @@ func (c *Client) registerUpdateEP() {
 
 		msg := c.timeoutChannelRead()
 		if msg == nil {
-			w.WriteHeader(http.StatusAccepted)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
-		cu := c.getClientUpdate([]lurk.LurkMessage{msg})
+		c.updateClientState([]lurk.LurkMessage{msg})
 
-		jsonString, err := json.Marshal(cu)
+		jsonString, err := json.Marshal(c.State)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -78,6 +78,7 @@ func (c *Client) registerUpdateEP() {
 
 const terminateEP = "/lurk-client/terminate/"
 
+// This endpoint shall be called when the page is closed.
 func (c *Client) registerTerminateEP() {
 	http.HandleFunc(fmt.Sprintf("%s%d/", terminateEP, c.id), func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

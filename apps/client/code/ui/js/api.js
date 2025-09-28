@@ -92,18 +92,16 @@ function sendStart(){
 
 async function pollUpdateEP(){
     try{
-        fetch(client.updateAPI).then(response => {
-            if(!response.ok){
-                throw new Error("Bad response in poll");
-            }
-            return response.json()
-        }).then(data =>{
+        let response = await fetch(client.updateAPI)
+        if(response.status === 200){
+            data = await response.json();
+            console.log(response.status)
             updateGame(data);
-        });
+        }
     }catch(e){
-        console.error("Could not poll endpoint: ", e);
+        console.error(e);
     }finally{
-        setTimeout(pollUpdateEP, 10);
+        await pollUpdateEP();
     }
 }
 
@@ -112,7 +110,7 @@ function updateGame(data){
     const gamePlayers = document.getElementById("game-players");
     const gameRooms = document.getElementById("game-rooms");
 
-    gameDesc.innerHTML += data.info.replace(/\n/g, '<br>');
-    gamePlayers.innerHTML += data.players.replace(/\n/g, '<br>');
-    gameRooms.innerHTML += data.rooms.replace(/\n/g, '<br>');
+    gameDesc.innerHTML = data.info.replace(/\n/g, '<br>');
+    gamePlayers.innerHTML = data.players.replace(/\n/g, '<br>');
+    gameRooms.innerHTML = data.rooms.replace(/\n/g, '<br>');
 }

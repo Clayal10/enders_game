@@ -39,14 +39,14 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, clientUpdate, err := client.New(cfg)
+	c, err := client.New(cfg)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
 		return
 	}
 
-	jsonData, err := json.Marshal(clientUpdate)
+	jsonData, err := json.Marshal(c.State)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)

@@ -34,12 +34,13 @@ func (c *Client) readFromServer() {
 	}
 }
 
+// Will attempt to read from the message queue and will time out after 5 seconds.
 func (c *Client) timeoutChannelRead() lurk.LurkMessage {
 	for {
 		select {
 		case msg := <-c.q:
 			return msg
-		case <-time.After(time.Millisecond * 1000): // experiment with this
+		case <-time.After(time.Millisecond * 5000): // experiment with this
 			return nil
 		}
 	}

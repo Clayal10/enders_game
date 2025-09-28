@@ -31,11 +31,11 @@ func TestStartingServer(t *testing.T) {
 		Port: fmt.Sprint(serverPort),
 	}
 
-	client, cu, err := New(clientConfig)
+	client, err := New(clientConfig)
 	a.NoError(err)
-	a.True(strings.Contains(cu.Info, "LURK")) // from the version
+	a.True(strings.Contains(client.State.Info, "LURK")) // from the version
 	a.True(client.id != 0)
-	a.True(client.id == cu.Id)
+	a.True(client.id == client.State.Id)
 
 	client.Start()
 	defer client.cf()

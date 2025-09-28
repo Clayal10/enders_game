@@ -6,29 +6,101 @@ import (
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
-// getClientUpdate will take a slice of LurkMessage interface objects and return a ClientUpdate with
+// updateClientState will take a slice of LurkMessage interface objects and return a ClientUpdate with
 // the proper text fields.
-func (c *Client) getClientUpdate(lurkMessages []lurk.LurkMessage) *ClientUpdate {
-	cu := &ClientUpdate{
-		Id: c.id,
-	}
+func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 	for _, msg := range lurkMessages {
 		switch msg.GetType() {
 		case lurk.TypeGame:
 			game := msg.(*lurk.Game)
 			c.Game = game
-			cu.Info += fmt.Sprintf("Stat Limit: %v\nInitial Points: %v\n%s\n", game.StatLimit, game.InitialPoints, game.GameDesc)
+			c.State.Info += fmt.Sprintf("Stat Limit: %v\nInitial Points: %v\n%s\n", game.StatLimit, game.InitialPoints, game.GameDesc)
 		case lurk.TypeVersion:
 			version := msg.(*lurk.Version)
 			extensionBytes := 0
 			for _, v := range version.Extensions {
 				extensionBytes += len(v)
 			}
-			cu.Info += fmt.Sprintf("LURK Version %v.%v | %v Bytes of Extensions\n", version.Major, version.Minor, extensionBytes)
+			c.State.Info += fmt.Sprintf("LURK Version %v.%v | %v Bytes of Extensions\n", version.Major, version.Minor, extensionBytes)
 		case lurk.TypeCharacter:
 			character := msg.(*lurk.Character)
-			cu.Players += fmt.Sprintf("%s | Attack: %v Defense: %v Health: %v Monster?: %v\n", character.Name, character.Attack, character.Defense, character.Health, character.Flags[lurk.Monster])
+			c.State.characters[character.Name] = character
+			c.stringifyCharacters()
+		case lurk.TypeRoom:
+			room := msg.(*lurk.Room)
+
+			c.State.rooms[room.RoomNumber] = room
+			c.State.stringifyRooms()
+		case lurk.TypeMessage:
+			message := msg.(*lurk.Message)
+			c.State.Info += lineBreak
+			if message.Narration {
+				c.State.Info += fmt.Sprintf(narratorTemplate, message.Sender, message.Recipient, message.Text)
+				continue
+			}
+			c.State.Info += fmt.Sprintf(messageTemplate, message.Sender, message.Recipient, message.Text)
 		}
 	}
-	return cu
 }
+
+// These will be not in the same order :(
+func (c *Client) stringifyCharacters() {
+	c.State.Players = ""
+	for _, character := range c.State.characters {
+		if character.RoomNum != c.character.RoomNum {
+			continue
+		}
+		if character.Flags[lurk.Monster] {
+			c.State.Players += fmt.Sprintf(monsterTemplate, character.Name, character.Attack, character.Defense, character.Health)
+			continue
+		}
+		if character.Name == c.character.Name {
+			c.State.Players += fmt.Sprintf(userTemplate, character.Name, character.Attack, character.Defense, character.Health)
+			continue
+		}
+		c.State.Players += fmt.Sprintf(characterTemplate, character.Name, character.Attack, character.Defense, character.Health)
+	}
+}
+
+func (state *ClientState) stringifyRooms() {
+	state.Rooms = ""
+	for _, room := range state.rooms {
+		state.Rooms += fmt.Sprintf(roomTemplate, room.RoomNumber, room.RoomName, room.RoomDesc)
+	}
+}
+
+const characterTemplate = `
+%s
+  | Attack: %v
+  | Defense: %v
+  | Health: %v
+  `
+
+const monsterTemplate = `
+<span style="color: red;">%s</span>
+  | Attack: %v
+  | Defense: %v
+  | Health: %v
+  `
+
+const userTemplate = `
+<span style="color: green;">%s</span>
+  | Attack: %v
+  | Defense: %v
+  | Health: %v
+  `
+
+const roomTemplate = `
+%v: %s
+-> %s
+`
+
+const messageTemplate = `
+%s => %s: %s`
+
+const narratorTemplate = `
+<span style="color: purple;">%s</span> => %s: %s`
+
+const lineBreak = `
+==================================================
+`
