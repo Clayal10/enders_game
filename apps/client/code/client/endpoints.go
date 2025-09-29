@@ -20,17 +20,16 @@ func (c *Client) registerStartEP() {
 			return
 		}
 
-		c.character = &lurk.Character{
-			Type: lurk.TypeCharacter,
-			Name: fmt.Sprintf("Test Client %d", c.id),
-			Flags: map[string]bool{
-				lurk.Ready: true,
-			},
-			RoomNum:    1, // FIX we need to display the character we get from the server, not the one we made.
-			PlayerDesc: "Test Character",
-		}
-		_, err := c.conn.Write(lurk.Marshal(c.character))
+		char, err := c.getOrMakeCharacter(r.Body)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		c.character = char
+		c.character.Flags[lurk.Alive] = true
+
+		if _, err = c.conn.Write(lurk.Marshal(c.character)); err != nil {
 			log.Printf("%s: could not write Character to server", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return

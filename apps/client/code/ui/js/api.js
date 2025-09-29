@@ -1,17 +1,18 @@
 const setupAPI = "/lurk-client/setup/"
 // These require IDs
-const startAPI = "/lurk-client/start"
-const updateAPI = "/lurk-client/update"
-const terminateAPI = "/lurk-client/terminate"
+const startAPI = "/lurk-client/start/"
+const updateAPI = "/lurk-client/update/"
+const terminateAPI = "/lurk-client/terminate/"
 
 class Client{
     constructor(id){
         this.id = id;
-        this.startAPI = startAPI+"/"+id+"/";
-        this.updateAPI = updateAPI+"/"+id+"/";
-        this.terminateAPI = terminateAPI+"/"+id+"/";
+        this.startAPI = startAPI+id+"/";
+        this.updateAPI = updateAPI+id+"/";
+        this.terminateAPI = terminateAPI+id+"/";
     };
 };
+
 
 var client;
 
@@ -20,6 +21,7 @@ window.addEventListener('beforeunload', (event) => {
     return
   }
   navigator.sendBeacon(client.terminateAPI);
+  shouldPoll = false;
 });
 
 // Sends:
@@ -59,17 +61,33 @@ function sendConfig(){
             client = new Client(data.id)
             updateGame(data);
         });
+        setupDisplay(); // For character input.
     }catch(e){
         console.error("Could not send config: ", e);
         return
     }
 }
 
+function sendTerminate(){
+    try{
+        cleanup();
+        fetch(client.terminateAPI, {
+            method: 'POST',
+            headers:{
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+    }catch(e){
+        console.error("Could not send terminate: ", e)
+        return
+    }
+}
+
 function sendStart(){
     try{
-        const start = {
-            "start": ""
-        };
+        const start = getCharacterInput();
         fetch(client.startAPI, {
             method: 'POST',
             headers: {
@@ -81,6 +99,7 @@ function sendStart(){
             if(!response.ok){
                 throw new Error("Bad Response");
             }
+            shouldPoll = true;
         })
     }catch(e){
         console.error("Could not send start: ", e);
@@ -90,6 +109,7 @@ function sendStart(){
     }
 }
 
+var shouldPoll = true;
 async function pollUpdateEP(){
     try{
         let response = await fetch(client.updateAPI)
@@ -101,16 +121,9 @@ async function pollUpdateEP(){
     }catch(e){
         console.error(e);
     }finally{
-        await pollUpdateEP();
+        if(shouldPoll){
+            await pollUpdateEP();
+        }
     }
 }
 
-function updateGame(data){
-    const gameDesc = document.getElementById("game-text");
-    const gamePlayers = document.getElementById("game-players");
-    const gameRooms = document.getElementById("game-rooms");
-
-    gameDesc.innerHTML = data.info.replace(/\n/g, '<br>');
-    gamePlayers.innerHTML = data.players.replace(/\n/g, '<br>');
-    gameRooms.innerHTML = data.rooms.replace(/\n/g, '<br>');
-}

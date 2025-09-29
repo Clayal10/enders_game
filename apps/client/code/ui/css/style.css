@@ -72,7 +72,7 @@ button:hover{
     background-color: #001540;
     border-radius: 10px;
     padding: 1em;
-    height: 75%;
+    height: 67%;
 
     display: flex;
     flex-direction: column;
@@ -83,7 +83,7 @@ button:hover{
     width: 100%;
     display: flex;
     flex-direction: row;
-    height: 70%;
+    height: 95%;
     justify-content: space-between;
 }
 
@@ -91,14 +91,28 @@ button:hover{
     display: inline-block;
     width: 50%;
     white-space: pre-wrap;
+    overflow: auto;
 }
 
 #game-players, #game-rooms{
     display: inline-block;
     width: 25%;
     white-space: pre-wrap;
+    overflow:   auto;
 }
 
-#text-input{
+#input-text{
     color: #00316e;
+}
+
+#game-input{
+    width: 95%;
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.hidden{
+    display: none;
 }

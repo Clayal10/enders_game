@@ -25,6 +25,9 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 		case lurk.TypeCharacter:
 			character := msg.(*lurk.Character)
 			c.State.characters[character.Name] = character
+			if character.Name == c.character.Name {
+				c.character = character
+			}
 			c.stringifyCharacters()
 		case lurk.TypeRoom:
 			room := msg.(*lurk.Room)
