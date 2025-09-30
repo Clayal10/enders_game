@@ -42,6 +42,10 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 				continue
 			}
 			c.State.Info += fmt.Sprintf(messageTemplate, message.Sender, message.Recipient, message.Text)
+		case lurk.TypeError:
+			e := msg.(*lurk.Error)
+			c.State.Info += lineBreak
+			c.State.Info += fmt.Sprintf(errorTemplate, e.ErrCode, e.ErrMessage)
 		}
 	}
 }
@@ -92,6 +96,9 @@ const userTemplate = `
   | Defense: %v
   | Health: %v
   `
+const errorTemplate = `
+<span style="color: red;">Error #%d</span: %s
+`
 
 const roomTemplate = `
 %v: %s

@@ -20,6 +20,12 @@ function setupDisplay(){
     reveal("input-text");
 }
 
+const errorCharacter = '<span style="color: red;">Error</span>: Invalid character settings, try again.'
+function handleCharacterError(){
+    document.getElementById("game-text").innerHTML += errorCharacter
+    setupDisplay()
+}
+
 function hide(id){
     document.getElementById(id).classList.add("hidden");
 }
@@ -43,6 +49,7 @@ function cleanup(){
 
 var userCharacter = {};
 
+//This should be an overlay type with all elements shown at once.
 function addName(){
     userCharacter.name = document.getElementById("input-text").value;
     hide("input-button-name");

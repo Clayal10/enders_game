@@ -97,6 +97,7 @@ function sendStart(){
             body: JSON.stringify(start)
         }).then(response => {
             if(!response.ok){
+                handleCharacterError();
                 throw new Error("Bad Response");
             }
             shouldPoll = true;
