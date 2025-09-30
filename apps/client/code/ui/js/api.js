@@ -101,6 +101,7 @@ function sendStart(){
             }
             shouldPoll = true;
         })
+        hide("input-button");
     }catch(e){
         console.error("Could not send start: ", e);
         return

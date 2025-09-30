@@ -110,7 +110,8 @@ button:hover{
     margin: auto;
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 1em;
 }
 
 .hidden{
