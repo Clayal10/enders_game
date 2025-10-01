@@ -33,7 +33,6 @@ func (c *Client) readFromServer() {
 		if lurkMessage, err = lurk.Unmarshal(ba); err != nil {
 			break
 		}
-		log.Printf("Got type %v from server", lurkMessage.GetType())
 		c.q <- lurkMessage
 	}
 }

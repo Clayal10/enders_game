@@ -34,6 +34,8 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 
 			c.State.rooms[room.RoomNumber] = room
 			c.State.stringifyRooms()
+		case lurk.TypeConnection:
+
 		case lurk.TypeMessage:
 			message := msg.(*lurk.Message)
 			c.State.Info += lineBreak

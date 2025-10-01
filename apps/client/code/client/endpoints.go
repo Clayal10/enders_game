@@ -41,8 +41,6 @@ func (c *Client) registerStartEP() {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		w.WriteHeader(http.StatusOK)
 	})
 }
 
