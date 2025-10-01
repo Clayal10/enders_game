@@ -18,9 +18,19 @@ type ClientState struct {
 	Players string `json:"players"`
 	Id      int64  `json:"id"`
 
-	characters map[string]*lurk.Character
-	rooms      map[uint16]*lurk.Room
-	// connections too.
+	characters        []*lurk.Character // key is name
+	uniqueCharacters  map[string]int
+	room              *lurk.Room
+	connections       []*lurk.Connection // key is room number
+	uniqueConnections map[string]int
+}
+
+func newClientState(id int64) *ClientState {
+	return &ClientState{
+		Id:                id,
+		uniqueCharacters:  map[string]int{},
+		uniqueConnections: map[string]int{},
+	}
 }
 
 // Client contains all data needed to run a client instance.
@@ -56,14 +66,10 @@ func New(cfg *Config) (*Client, error) {
 	id := time.Now().UnixMicro()
 
 	c := &Client{
-		conn: conn,
-		id:   id,
-		q:    make(chan lurk.LurkMessage, 100),
-		State: &ClientState{
-			Id:         id,
-			characters: map[string]*lurk.Character{},
-			rooms:      map[uint16]*lurk.Room{},
-		},
+		conn:  conn,
+		id:    id,
+		q:     make(chan lurk.LurkMessage, 100),
+		State: newClientState(id),
 	}
 
 	c.updateClientState(lurkMessages)

@@ -24,18 +24,20 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			c.State.Info += fmt.Sprintf("LURK Version %v.%v | %v Bytes of Extensions\n", version.Major, version.Minor, extensionBytes)
 		case lurk.TypeCharacter:
 			character := msg.(*lurk.Character)
-			c.State.characters[character.Name] = character
+			c.State.characters = append(c.State.characters, character)
+			c.State.uniqueCharacters[character.Name] = len(c.State.characters) - 1
 			if character.Name == c.character.Name {
 				c.character = character
 			}
 			c.stringifyCharacters()
 		case lurk.TypeRoom:
 			room := msg.(*lurk.Room)
-
-			c.State.rooms[room.RoomNumber] = room
+			c.State.room = room
 			c.State.stringifyRooms()
 		case lurk.TypeConnection:
-
+			connection := msg.(*lurk.Connection)
+			c.State.connections = append(c.State.connections, connection)
+			c.State.stringifyRooms()
 		case lurk.TypeMessage:
 			message := msg.(*lurk.Message)
 			c.State.Info += lineBreak
@@ -52,19 +54,16 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 	}
 }
 
-// These will be not in the same order :(
 func (c *Client) stringifyCharacters() {
-	c.State.Players = ""
-	for _, character := range c.State.characters {
-		if character.RoomNum != c.character.RoomNum {
+	c.State.Players = fmt.Sprintf(userTemplate, c.character.Name, c.character.Attack, c.character.Defense, c.character.Health)
+	namesInList := map[string]bool{}
+	for i, character := range c.State.characters {
+		if character.RoomNum != c.character.RoomNum || namesInList[character.Name] || c.State.uniqueCharacters[character.Name] != i || character.Name == c.character.Name {
 			continue
 		}
+		namesInList[character.Name] = true
 		if character.Flags[lurk.Monster] {
 			c.State.Players += fmt.Sprintf(monsterTemplate, character.Name, character.Attack, character.Defense, character.Health)
-			continue
-		}
-		if character.Name == c.character.Name {
-			c.State.Players += fmt.Sprintf(userTemplate, character.Name, character.Attack, character.Defense, character.Health)
 			continue
 		}
 		c.State.Players += fmt.Sprintf(characterTemplate, character.Name, character.Attack, character.Defense, character.Health)
@@ -73,8 +72,14 @@ func (c *Client) stringifyCharacters() {
 
 func (state *ClientState) stringifyRooms() {
 	state.Rooms = ""
-	for _, room := range state.rooms {
-		state.Rooms += fmt.Sprintf(roomTemplate, room.RoomNumber, room.RoomName, room.RoomDesc)
+	roomsInList := map[uint16]bool{}
+	state.Rooms += fmt.Sprintf(roomTemplate, state.room.RoomNumber, state.room.RoomName, state.room.RoomDesc)
+	roomsInList[state.room.RoomNumber] = true
+	for _, connection := range state.connections {
+		if roomsInList[connection.RoomNumber] {
+			continue
+		}
+		state.Rooms += fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
 	}
 }
 
@@ -99,10 +104,15 @@ const userTemplate = `
   | Health: %v
   `
 const errorTemplate = `
-<span style="color: red;">Error #%d</span: %s
+<span style="color: red;">Error #%d</span>: %s
 `
 
 const roomTemplate = `
+(Current Room) %v: %s
+-> %s
+`
+
+const connectionTemplate = `
 %v: %s
 -> %s
 `

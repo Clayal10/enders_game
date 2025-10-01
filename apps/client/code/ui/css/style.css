@@ -117,3 +117,8 @@ button:hover{
 .hidden{
     display: none;
 }
+
+#game-info pre{
+    border: 5px solid #000b22;
+    padding: 2px;
+}
