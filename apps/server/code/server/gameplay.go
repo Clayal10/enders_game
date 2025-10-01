@@ -593,6 +593,7 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 	return err
 }
 
+// Is only called in thread safe function.
 func (g *game) handleHiveQueenFight(user *user, conn net.Conn) error {
 	hq := g.monsters[hiveQueenCocoon]
 	if user.c.RoomNum != shakespeare {
@@ -616,6 +617,8 @@ func (g *game) handleHiveQueenFight(user *user, conn net.Conn) error {
 }
 
 func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) (err error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	user, ok := g.users[player]
 	if !ok {
 		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in PVP fighting", cross.ErrUserNotInServer.Error()))

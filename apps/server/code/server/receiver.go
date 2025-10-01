@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Clayal10/enders_game/lib/cross"
+	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
 type receiver struct {
@@ -66,7 +67,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 	}
 
 	player, err := rec.registerPlayer(conn)
-	defer delete(rec.users, player)
+	defer rec.cleanup(player)
 	if err != nil {
 		log.Printf("%v: error registering player", err.Error())
 		return
@@ -76,8 +77,8 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		log.Printf("%v: error during gameplay", err.Error())
 		return
 	}
+	rec.cleanup(player)
 	log.Printf("%v left.", player)
-	delete(rec.users, player)
 	time.Sleep(terminationTimeout)
 }
 
@@ -85,4 +86,68 @@ func (rec *receiver) stop() {
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
 	rec.shouldRun = false
+}
+
+func (rec *receiver) cleanup(player string) {
+	rec.mu.Lock()
+	defer rec.mu.Unlock()
+	delete(rec.users, player)
+}
+
+// We want to read exactly the length of the message. This function will do up to 3
+// calls to 'Read' to read exactly one message.
+func readSingleMessage(conn net.Conn) ([]byte, int, error) {
+	const messageTypePadding = 64
+	buffer := make([]byte, 1)
+	if _, err := conn.Read(buffer); err != nil {
+		return nil, 0, err
+	}
+
+	bytesNeeded, ok := lurk.LengthOffset[lurk.MessageType(buffer[0])]
+	if !ok {
+		return nil, 0, cross.ErrInvalidMessageType
+	}
+	if lurk.MessageType(buffer[0]) == lurk.TypeMessage {
+		bytesNeeded += messageTypePadding
+	}
+
+	if bytesNeeded == 1 {
+		return buffer, 1, nil
+	}
+
+	b := make([]byte, bytesNeeded-1)
+	n := 0
+	defer func() { _ = conn.SetReadDeadline(time.Time{}) }()
+	for n < len(b) {
+		_ = conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+		m, err := conn.Read(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		buffer = append(buffer, b[:m]...)
+		n += m
+	}
+
+	varLen, err := lurk.GetVariableLength(buffer)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if varLen == -1 {
+		return buffer, bytesNeeded, nil
+	}
+
+	b = make([]byte, varLen)
+	n = 0
+	for n < len(b) {
+		_ = conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+		m, err := conn.Read(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		buffer = append(buffer, b[:m]...)
+		n += m
+	}
+
+	return buffer, varLen + bytesNeeded, nil
 }
