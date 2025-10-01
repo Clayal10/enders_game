@@ -67,7 +67,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 	}
 
 	player, err := rec.registerPlayer(conn)
-	defer delete(rec.users, player)
+	defer rec.cleanup(player)
 	if err != nil {
 		log.Printf("%v: error registering player", err.Error())
 		return
@@ -77,8 +77,8 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		log.Printf("%v: error during gameplay", err.Error())
 		return
 	}
+	rec.cleanup(player)
 	log.Printf("%v left.", player)
-	delete(rec.users, player)
 	time.Sleep(terminationTimeout)
 }
 
@@ -86,6 +86,12 @@ func (rec *receiver) stop() {
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
 	rec.shouldRun = false
+}
+
+func (rec *receiver) cleanup(player string) {
+	rec.mu.Lock()
+	defer rec.mu.Unlock()
+	delete(rec.users, player)
 }
 
 // We want to read exactly the length of the message. This function will do up to 3

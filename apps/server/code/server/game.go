@@ -215,7 +215,9 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	g.mu.Unlock()
 
 	for {
+		g.mu.Lock()
 		user, ok := g.users[player]
+		g.mu.Unlock()
 		if !ok { // User has been removed / left.
 			return nil
 		}
