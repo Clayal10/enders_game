@@ -451,22 +451,23 @@ func (g *game) createMonsters() {
 
 const defaultWriteTimeout = time.Second
 
-func (g *game) handleMessage(msg *lurk.Message, conn net.Conn) (err error) {
+func (g *game) handleMessage(msg *lurk.Message, conn net.Conn) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	recipient, ok := g.users[msg.Recipient]
 	if !ok {
-		return g.sendError(conn, cross.NoTarget, fmt.Sprintf("%v: error in sending message", cross.ErrUserNotInServer.Error()))
+		return cross.ErrUserNotInServer
 	}
 
 	if err := recipient.conn.SetWriteDeadline(time.Now().Add(defaultWriteTimeout)); err != nil {
-		return err
+		return g.sendError(conn, cross.Other, fmt.Sprintf("FAILED to send message from %s to %s\n", msg.Sender, msg.Recipient))
 	}
-	if _, err = recipient.conn.Write(lurk.Marshal(msg)); err == nil {
-		log.Printf("%s sent message to %s\n", msg.Sender, msg.Recipient)
+	if _, err := recipient.conn.Write(lurk.Marshal(msg)); err != nil {
+		return g.sendError(conn, cross.Other, fmt.Sprintf("FAILED to send message from %s to %s\n", msg.Sender, msg.Recipient))
 	}
-	return err
+	log.Printf("%s sent message to %s\n", msg.Sender, msg.Recipient)
+	return g.sendAccept(conn, lurk.TypeMessage)
 }
 
 func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, player string) error {
@@ -475,9 +476,8 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 	user, ok := g.users[player]
 	// Checks for user.
 	if !ok {
-		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in changing room", cross.ErrUserNotInServer.Error()))
+		return cross.ErrUserNotInServer
 	}
-
 	// Check for valid request.
 	currentRoom := g.rooms[user.c.RoomNum]
 	hasConnection := false
@@ -533,9 +533,8 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 	defer g.mu.Unlock()
 	user, ok := g.users[player]
 	if !ok {
-		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in fighting", cross.ErrUserNotInServer.Error()))
+		return cross.ErrUserNotInServer
 	}
-
 	if !user.c.Flags[lurk.Alive] {
 		return g.sendError(conn, cross.NoFight, player+", you cannot fight when you are dead")
 	}
@@ -567,13 +566,13 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 		}
 
 		g.startHealTimer(monster)
-		if err := g.sendAllCharacters(currentRoom, conn); err != nil {
+		if err := g.sendAllEntitiesToAll(currentRoom); err != nil {
 			return err
 		}
 	}
 
 	for _, u := range g.users {
-		if !u.c.Flags[lurk.JoinBattle] || u.c.RoomNum != currentRoom.r.RoomNumber {
+		if !u.c.Flags[lurk.JoinBattle] || u.c.RoomNum != currentRoom.r.RoomNumber || u.c.Name == user.c.Name {
 			continue
 		}
 
@@ -583,8 +582,7 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 		if user.c.Flags[lurk.Alive] {
 			user.c.Gold += 10
 		}
-
-		if err := g.sendAllCharacters(currentRoom, conn); err != nil {
+		if err := g.sendAllEntitiesToAll(currentRoom); err != nil {
 			return err
 		}
 	}
@@ -630,7 +628,7 @@ func (g *game) handleHiveQueenFight(user *user, conn net.Conn) error {
 			return err
 		}
 	}
-	return g.sendAllCharacters(g.rooms[shakespeare], conn)
+	return g.sendAllEntitiesToAll(g.rooms[user.c.RoomNum])
 }
 
 func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) (err error) {
@@ -638,7 +636,7 @@ func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) 
 	defer g.mu.Unlock()
 	user, ok := g.users[player]
 	if !ok {
-		return g.sendError(conn, cross.Other, fmt.Sprintf("%v: error in PVP fighting", cross.ErrUserNotInServer.Error()))
+		return cross.ErrUserNotInServer
 	}
 
 	if pvp.TargetName == hiveQueenCocoon {
@@ -672,10 +670,7 @@ func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) 
 
 	lurk.CalculateFight(user.c, target.c)
 
-	if err = g.sendAllCharacters(g.rooms[user.c.RoomNum], conn); err != nil {
-		return err
-	}
-	if err = g.sendAllCharacters(g.rooms[target.c.RoomNum], target.conn); err != nil {
+	if err = g.sendAllEntitiesToAll(g.rooms[user.c.RoomNum]); err != nil {
 		return err
 	}
 
@@ -703,7 +698,29 @@ func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) 
 
 	return err
 }
-func (g *game) handleLoot(loot *lurk.Loot, player string) {}
+
+func (g *game) handleLoot(conn net.Conn, loot *lurk.Loot, player string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	user, ok := g.users[player]
+	if !ok {
+		return cross.ErrUserNotInServer
+	}
+
+	target, ok := g.users[loot.TargetName]
+	if !ok {
+		return g.sendError(conn, cross.NoTarget, cross.ErrUserNotInServer.Error())
+	}
+
+	if target.c.Flags[lurk.Alive] || !user.c.Flags[lurk.Alive] || target.c.RoomNum != user.c.RoomNum {
+		return g.sendError(conn, cross.Other, "Invalid loot conditions!")
+	}
+	lootedGold := target.c.Gold / 5
+	user.c.Gold += lootedGold
+	target.c.Gold /= 2
+	return g.sendAllEntitiesToAll(g.rooms[user.c.RoomNum])
+}
+
 func (g *game) handleLeave(player string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()

@@ -43,22 +43,18 @@ func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
 		return err
 	}
 
-	if err := g.sendAllCharacters(room, conn); err != nil {
+	if err := g.sendAllEntities(room, conn); err != nil {
 		return err
 	}
 
 	return g.sendConnections(room, player, conn)
 }
 
-func (g *game) sendAllCharacters(room *room, conn net.Conn) (err error) {
+// sends information on all users and monsters to the specified 'conn'
+func (g *game) sendAllEntities(room *room, conn net.Conn) (err error) {
 	// all characters and monsters in that room
-	for _, user := range g.users {
-		if user.c.RoomNum != room.r.RoomNumber {
-			continue
-		}
-		if _, err = conn.Write(lurk.Marshal(user.c)); err != nil {
-			return
-		}
+	if err = g.sendAllCharacters(room, conn); err != nil {
+		return
 	}
 
 	for _, npc := range g.monsters {
@@ -67,6 +63,31 @@ func (g *game) sendAllCharacters(room *room, conn net.Conn) (err error) {
 		}
 		if _, err = conn.Write(lurk.Marshal(npc)); err != nil {
 			return
+		}
+	}
+	return
+}
+
+func (g *game) sendAllEntitiesToAll(room *room) (err error) {
+	for _, u := range g.users {
+		if u.c.RoomNum != room.r.RoomNumber {
+			continue
+		}
+		if err = g.sendAllEntities(room, u.conn); err != nil {
+			break
+		}
+	}
+	return
+}
+
+// sends information on all characters to the specified 'conn'
+func (g *game) sendAllCharacters(room *room, conn net.Conn) (err error) {
+	for _, user := range g.users {
+		if user.c.RoomNum != room.r.RoomNumber {
+			continue
+		}
+		if _, err = conn.Write(lurk.Marshal(user.c)); err != nil {
+			break
 		}
 	}
 	return

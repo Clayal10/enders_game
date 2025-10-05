@@ -88,7 +88,7 @@ func TestServerFunctionality(t *testing.T) {
 		conn := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
 			Name:       "Tester",
-			Attack:     1,
+			Attack:     3,
 			Defense:    0,
 			Regen:      0,
 			RoomNum:    1,
@@ -107,30 +107,16 @@ func TestServerFunctionality(t *testing.T) {
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
-		_ = startClientConnection(a, cfg, &lurk.Character{ // A bot
+		conn3 := startClientConnection(a, cfg, &lurk.Character{
 			Type:       lurk.TypeCharacter,
-			Name:       "bot",
-			Attack:     50,
-			Defense:    49,
-			Regen:      1,
+			Name:       "fighter bot",
+			Attack:     1,
+			Defense:    0,
+			Regen:      0,
 			RoomNum:    1,
 			Flags:      map[string]bool{lurk.Alive: true, lurk.JoinBattle: true},
 			PlayerDesc: "A guy who is just programming a game server",
 		})
-
-		conn3 := startClientConnection(a, cfg, &lurk.Character{ // A bot
-			Type:       lurk.TypeCharacter,
-			Name:       "Guy",
-			Attack:     50,
-			Defense:    49,
-			Regen:      1,
-			RoomNum:    1,
-			Flags:      map[string]bool{lurk.Alive: true, lurk.JoinBattle: true},
-			PlayerDesc: "A guy who is just programming a game server",
-		})
-
-		_, err := conn3.Write(lurk.Marshal(&lurk.ChangeRoom{RoomNumber: 2}))
-		a.NoError(err)
 
 		buffer, _, err := readSingleMessage(conn) // read the 'room'
 		a.NoError(err)
@@ -221,8 +207,40 @@ func TestServerFunctionality(t *testing.T) {
 		//Fight petra
 		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
 		a.NoError(err)
-		time.Sleep(50 * time.Millisecond)
-		a.True(strings.Contains(buf.String(), "died in a fight"))
+
+		a.Eventually(func() bool {
+			return strings.Contains(buf.String(), "died in a fight")
+		}, time.Second, 5*time.Millisecond)
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+
+		a.Eventually(func() bool {
+			lm := readUntil(a, lurk.TypeCharacter, conn3)
+			if lm == nil {
+				return false
+			}
+			ch := lm.(*lurk.Character)
+			return ch.Health < 100 && ch.Name == "fighter bot"
+		}, time.Second, time.Millisecond)
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Loot{TargetName: "fighter bot"}))
+		a.NoError(err)
+
+		errMessage := readUntil(a, lurk.TypeError, conn2)
+
+		a.True(errMessage != nil)
+		a.True(errMessage.GetType() == lurk.TypeError)
+		e, ok := errMessage.(*lurk.Error)
+		a.True(ok)
+		a.True(strings.Contains(e.ErrMessage, "Invalid loot conditions"))
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Loot{TargetName: "fighter bot"}))
+		a.NoError(err)
+
 		sendLeave(conn, a)
 		/* Termination of conn*/
 
@@ -239,12 +257,13 @@ func TestServerFunctionality(t *testing.T) {
 		_, err = conn2.Write(ba)
 		a.NoError(err)
 
-		errMessage := readUntil(a, lurk.TypeError, conn2)
+		errMessage = readUntil(a, lurk.TypeError, conn2)
 
 		a.True(errMessage != nil)
 		a.True(errMessage.GetType() == lurk.TypeError)
-		e, ok := errMessage.(*lurk.Error)
+		e, ok = errMessage.(*lurk.Error)
 		a.True(ok)
+		fmt.Println(e.ErrMessage)
 		a.True(strings.Contains(e.ErrMessage, "Message contains invalid fields"))
 
 		sendLeave(conn2, a)
