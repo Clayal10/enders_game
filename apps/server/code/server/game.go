@@ -147,6 +147,8 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
 	// Character is good at this point, flip flag and wait for their start.
 	character.Flags[lurk.Ready] = true
+	character.Flags[lurk.Monster] = false
+	character.Flags[lurk.Alive] = true
 	character.RoomNum = battleSchool
 	u := &user{
 		c:           character,
@@ -187,12 +189,14 @@ func (g *game) notifyNewArrival(newbie string) error {
 	if !ok {
 		return cross.ErrUserNotInServer
 	}
+	newUser.c.Flags[lurk.Started] = true
 
 	for _, otherUser := range g.users {
-		if otherUser.c.RoomNum != battleSchool || otherUser.c.Name == newUser.c.Name {
+		if otherUser.c.RoomNum != battleSchool {
 			continue
 		}
-		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, "", ""); err != nil {
+		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, otherUser.c.Name,
+			fmt.Sprintf("%s joined battle school!", newUser.c.Name)); err != nil {
 			log.Printf("Could not send message to %s", otherUser.c.Name)
 		}
 	}
@@ -301,7 +305,7 @@ func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Con
 		if !ok {
 			return nil, ok
 		}
-		g.handleLoot(msg, player)
+		err = g.handleLoot(conn, msg, player)
 	case lurk.TypeLeave:
 		g.handleLeave(player)
 		return errDisconnect, false

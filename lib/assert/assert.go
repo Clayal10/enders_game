@@ -62,6 +62,14 @@ func (a *Assert) NotNil(obj any) {
 	}
 }
 
+func (a *Assert) Nil(obj any) {
+	a.t.Helper()
+
+	if obj != nil {
+		a.t.Error("Object is not nil!")
+	}
+}
+
 func (a *Assert) Eventually(f func() bool, duration time.Duration, tick time.Duration) {
 	a.t.Helper()
 	start := time.Now()

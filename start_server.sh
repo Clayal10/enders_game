@@ -5,7 +5,7 @@ set -e
 stop_server () {
     pid=$(ps axu | grep ./enders_game | head -n 1 | grep -oP '^\S+\s+\K\S+')
     lines=$(ps axu | grep ./enders_game | wc -l)
-    if [ "$lines" == "2" ]; then
+    if [ "$lines" != "1" ]; then
         echo "Killing active server"
         kill "$pid"
     fi
