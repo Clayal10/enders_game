@@ -150,6 +150,9 @@ func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
 	character.Flags[lurk.Monster] = false
 	character.Flags[lurk.Alive] = true
 	character.RoomNum = battleSchool
+	character.Health = initialHealth
+	character.Gold = 0
+	character.RoomNum = battleSchool
 	u := &user{
 		c:           character,
 		conn:        conn,
@@ -178,9 +181,7 @@ func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 	if _, ok := g.users[c.Name]; ok {
 		return cross.PlayerAlreadyExists
 	}
-	c.Health = initialHealth
-	c.Gold = 0
-	c.RoomNum = battleSchool
+
 	return cross.NoError
 }
 
@@ -279,6 +280,9 @@ func (g *game) checkStatusChange(user *user, conn net.Conn) error {
 }
 
 func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) (err error, _ bool) {
+	if player == "TestScript" {
+		log.Printf("TestScript doing %v", lm.GetType())
+	}
 	switch lm.GetType() {
 	case lurk.TypeMessage:
 		msg, ok := lm.(*lurk.Message)
