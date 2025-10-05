@@ -1,7 +1,6 @@
 package lurk_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/Clayal10/enders_game/lib/assert"
@@ -33,8 +32,6 @@ func TestFightCalculation(t *testing.T) {
 		count := 0
 		for c2.Flags[lurk.Alive] {
 			lurk.CalculateFight(c1, c2)
-			fmt.Printf("%+v\n", *c1)
-			fmt.Printf("%+v\n\n", *c2)
 			count++
 		}
 		a.True(c1.Flags[lurk.Alive] == true)
@@ -62,8 +59,6 @@ func TestFightCalculation(t *testing.T) {
 		count := 0
 		for c1.Flags[lurk.Alive] {
 			lurk.CalculateFight(c1, c2)
-			fmt.Printf("%+v\n", *c1)
-			fmt.Printf("%+v\n\n", *c2)
 			count++
 		}
 		a.True(c2.Flags[lurk.Alive] == true)
