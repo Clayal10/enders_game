@@ -457,7 +457,7 @@ func (g *game) handleMessage(msg *lurk.Message, conn net.Conn) error {
 
 	recipient, ok := g.users[msg.Recipient]
 	if !ok {
-		return cross.ErrUserNotInServer
+		return g.sendError(conn, cross.Other, fmt.Sprintf("User %s is not in the server", msg.Recipient))
 	}
 
 	if err := recipient.conn.SetWriteDeadline(time.Now().Add(defaultWriteTimeout)); err != nil {
