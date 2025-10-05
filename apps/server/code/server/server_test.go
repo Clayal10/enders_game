@@ -263,7 +263,6 @@ func TestServerFunctionality(t *testing.T) {
 		a.True(errMessage.GetType() == lurk.TypeError)
 		e, ok = errMessage.(*lurk.Error)
 		a.True(ok)
-		fmt.Println(e.ErrMessage)
 		a.True(strings.Contains(e.ErrMessage, "Message contains invalid fields"))
 
 		sendLeave(conn2, a)
