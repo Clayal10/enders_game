@@ -67,7 +67,7 @@ func serve() error {
 	fs := http.FileServer(http.Dir(staticDir))
 	http.Handle("/ui/", http.StripPrefix("/ui/", fs))
 
-	return http.ListenAndServe(fmt.Sprintf(":%v", defaultPort), nil)
+	return http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", defaultPort), nil)
 }
 
 func mainPageHandler(w http.ResponseWriter, req *http.Request) {
