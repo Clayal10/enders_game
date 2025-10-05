@@ -192,7 +192,8 @@ func (g *game) notifyNewArrival(newbie string) error {
 		if otherUser.c.RoomNum != battleSchool || otherUser.c.Name == newUser.c.Name {
 			continue
 		}
-		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, "", ""); err != nil {
+		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, otherUser.c.Name,
+			fmt.Sprintf("%s joined battle school!", newUser.c.Name)); err != nil {
 			log.Printf("Could not send message to %s", otherUser.c.Name)
 		}
 	}

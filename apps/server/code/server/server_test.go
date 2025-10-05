@@ -107,6 +107,31 @@ func TestServerFunctionality(t *testing.T) {
 			PlayerDesc: "A guy who is just programming a game server",
 		})
 
+		_ = startClientConnection(a, cfg, &lurk.Character{ // A bot
+			Type:       lurk.TypeCharacter,
+			Name:       "bot",
+			Attack:     50,
+			Defense:    49,
+			Regen:      1,
+			RoomNum:    1,
+			Flags:      map[string]bool{lurk.Alive: true, lurk.JoinBattle: true},
+			PlayerDesc: "A guy who is just programming a game server",
+		})
+
+		conn3 := startClientConnection(a, cfg, &lurk.Character{ // A bot
+			Type:       lurk.TypeCharacter,
+			Name:       "Guy",
+			Attack:     50,
+			Defense:    49,
+			Regen:      1,
+			RoomNum:    1,
+			Flags:      map[string]bool{lurk.Alive: true, lurk.JoinBattle: true},
+			PlayerDesc: "A guy who is just programming a game server",
+		})
+
+		_, err := conn3.Write(lurk.Marshal(&lurk.ChangeRoom{RoomNumber: 2}))
+		a.NoError(err)
+
 		buffer, _, err := readSingleMessage(conn) // read the 'room'
 		a.NoError(err)
 
@@ -198,7 +223,6 @@ func TestServerFunctionality(t *testing.T) {
 		a.NoError(err)
 		time.Sleep(50 * time.Millisecond)
 		a.True(strings.Contains(buf.String(), "died in a fight"))
-
 		sendLeave(conn, a)
 		/* Termination of conn*/
 

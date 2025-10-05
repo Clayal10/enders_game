@@ -511,7 +511,7 @@ func (g *game) handleChangeRoom(changeRoom *lurk.ChangeRoom, conn net.Conn, play
 	for name, u := range g.users {
 		msg := ""
 		if rn := currentRoom.r.RoomNumber; u.c.RoomNum == rn {
-			if !u.allowedRoom[rn] {
+			if !u.allowedRoom[newRoom.r.RoomNumber] {
 				msg = fmt.Sprintf("%s has been sent orders out of here.", user.c.Name)
 			}
 			if err := g.sendCharacterUpdate(user.c, u.conn, name, msg); err != nil {
@@ -567,7 +567,24 @@ func (g *game) handleFight(conn net.Conn, player string) error {
 		}
 
 		g.startHealTimer(monster)
-		if err := g.sendCharacters(currentRoom, conn); err != nil {
+		if err := g.sendAllCharacters(currentRoom, conn); err != nil {
+			return err
+		}
+	}
+
+	for _, u := range g.users {
+		if !u.c.Flags[lurk.JoinBattle] || u.c.RoomNum != currentRoom.r.RoomNumber {
+			continue
+		}
+
+		lurk.CalculateFight(user.c, u.c)
+		fights++
+
+		if user.c.Flags[lurk.Alive] {
+			user.c.Gold += 10
+		}
+
+		if err := g.sendAllCharacters(currentRoom, conn); err != nil {
 			return err
 		}
 	}
@@ -613,7 +630,7 @@ func (g *game) handleHiveQueenFight(user *user, conn net.Conn) error {
 			return err
 		}
 	}
-	return g.sendCharacters(g.rooms[shakespeare], conn)
+	return g.sendAllCharacters(g.rooms[shakespeare], conn)
 }
 
 func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) (err error) {
@@ -655,10 +672,10 @@ func (g *game) handlePVPFight(pvp *lurk.PVPFight, conn net.Conn, player string) 
 
 	lurk.CalculateFight(user.c, target.c)
 
-	if err = g.sendCharacters(g.rooms[user.c.RoomNum], conn); err != nil {
+	if err = g.sendAllCharacters(g.rooms[user.c.RoomNum], conn); err != nil {
 		return err
 	}
-	if err = g.sendCharacters(g.rooms[target.c.RoomNum], target.conn); err != nil {
+	if err = g.sendAllCharacters(g.rooms[target.c.RoomNum], target.conn); err != nil {
 		return err
 	}
 

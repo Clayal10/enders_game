@@ -31,6 +31,8 @@ func TestAssertFunctions(t *testing.T) {
 
 	a.NotNil(nil)
 	a.NotNil(1)
+	a.Nil(&mockAssert{})
+	a.Nil(nil)
 
 	count := 0
 	a.Eventually(func() bool {

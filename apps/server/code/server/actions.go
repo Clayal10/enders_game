@@ -43,14 +43,14 @@ func (g *game) sendRoom(room *room, player string, conn net.Conn) error {
 		return err
 	}
 
-	if err := g.sendCharacters(room, conn); err != nil {
+	if err := g.sendAllCharacters(room, conn); err != nil {
 		return err
 	}
 
 	return g.sendConnections(room, player, conn)
 }
 
-func (g *game) sendCharacters(room *room, conn net.Conn) (err error) {
+func (g *game) sendAllCharacters(room *room, conn net.Conn) (err error) {
 	// all characters and monsters in that room
 	for _, user := range g.users {
 		if user.c.RoomNum != room.r.RoomNumber {
