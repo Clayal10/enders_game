@@ -29,22 +29,16 @@ func TestGameActions(t *testing.T) {
 					return
 				default:
 					conn, err := l.Accept()
-					_ = conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 					a.NoError(err)
+					err = conn.SetReadDeadline(time.Now().Add(1000000 * time.Millisecond))
+					a.NoError(err)
+
 					ba, _, err := lurk.ReadSingleMessage(conn)
 					a.NoError(err)
 					msg, err := lurk.Unmarshal(ba)
 					a.NoError(err)
 					a.True(msg.GetType() == lurk.TypeError)
 					e := msg.(*lurk.Error)
-					a.True(strings.Contains(e.ErrMessage, cross.ErrUserNotInServer.Error()))
-
-					ba, _, err = lurk.ReadSingleMessage(conn)
-					a.NoError(err)
-					msg, err = lurk.Unmarshal(ba)
-					a.NoError(err)
-					a.True(msg.GetType() == lurk.TypeError)
-					e = msg.(*lurk.Error)
 					a.True(strings.Contains(e.ErrMessage, cross.ErrRoomsNotConnected.Error()))
 				}
 			}
@@ -56,9 +50,9 @@ func TestGameActions(t *testing.T) {
 		g := newGame()
 
 		// No player
-		a.NoError(g.handleChangeRoom(&lurk.ChangeRoom{
+		a.Error(g.handleChangeRoom(&lurk.ChangeRoom{
 			Type:       lurk.TypeChangeRoom,
-			RoomNumber: 100, // doesn't exist.
+			RoomNumber: 100,
 		}, c, "Test"))
 
 		testName := "test name"
