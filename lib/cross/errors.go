@@ -12,6 +12,7 @@ var (
 	ErrUserNotInServer    = errors.New("user does not exist in server")
 	ErrInvalidRoomNumber  = errors.New("room number does not exist")
 	ErrRoomsNotConnected  = errors.New("rooms are not connected")
+	ErrQueueEmpty         = errors.New("queue empty")
 )
 
 type ErrCode byte

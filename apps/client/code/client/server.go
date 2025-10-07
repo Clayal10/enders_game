@@ -33,21 +33,6 @@ func newClientState(id int64) *ClientState {
 	}
 }
 
-// Client contains all data needed to run a client instance.
-type Client struct {
-	Game      *lurk.Game
-	character *lurk.Character
-	State     *ClientState
-
-	id  int64
-	ctx context.Context
-	cf  context.CancelFunc
-
-	//mu   sync.Mutex
-	conn net.Conn
-	q    chan lurk.LurkMessage
-}
-
 type Config struct {
 	Hostname, Port string
 }
@@ -65,12 +50,7 @@ func New(cfg *Config) (*Client, error) {
 
 	id := time.Now().UnixMicro()
 
-	c := &Client{
-		conn:  conn,
-		id:    id,
-		q:     make(chan lurk.LurkMessage, 100),
-		State: newClientState(id),
-	}
+	c := newClient(conn, id)
 
 	c.updateClientState(lurkMessages)
 

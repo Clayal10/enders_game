@@ -34,6 +34,12 @@ func TestAssertFunctions(t *testing.T) {
 	a.Nil(&mockAssert{})
 	a.Nil(nil)
 
+	a.False(true)
+	a.False(false)
+
+	a.ErrorIs(cross.ErrFrameTooSmall, cross.ErrInvalidErrCode)
+	a.ErrorIs(cross.ErrFrameTooSmall, cross.ErrFrameTooSmall)
+
 	count := 0
 	a.Eventually(func() bool {
 		count++

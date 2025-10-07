@@ -5,7 +5,7 @@ set -e
 stop () {
     pid=$(ps axu | grep ./$1 | head -n 1 | grep -oP '^\S+\s+\K\S+')
     lines=$(ps axu | grep ./$1 | wc -l)
-    if [ "$lines" == "2" ]; then
+    if [ "$lines" != "1" ]; then
         echo "Killing $1"
         kill "$pid"
     fi

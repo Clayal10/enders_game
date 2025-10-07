@@ -52,13 +52,13 @@ func (c *Client) registerUpdateEP() {
 			return
 		}
 
-		msg := c.timeoutChannelRead()
-		if msg == nil {
+		messages := c.dequeueAll()
+		if len(messages) == 0 {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
-		c.updateClientState([]lurk.LurkMessage{msg})
+		c.updateClientState(messages)
 
 		jsonString, err := json.Marshal(c.State)
 		if err != nil {

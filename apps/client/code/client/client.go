@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,8 +12,33 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Clayal10/enders_game/lib/data"
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
+
+// Client contains all data needed to run a client instance.
+type Client struct {
+	Game      *lurk.Game
+	character *lurk.Character
+	State     *ClientState
+
+	id  int64
+	ctx context.Context
+	cf  context.CancelFunc
+
+	//mu   sync.Mutex
+	conn net.Conn
+	q    *data.Queue[lurk.LurkMessage]
+}
+
+func newClient(conn net.Conn, id int64) *Client {
+	return &Client{
+		conn:  conn,
+		id:    id,
+		q:     data.NewQueue[lurk.LurkMessage](100),
+		State: newClientState(id),
+	}
+}
 
 // This function enqueues messages into the message queue to be returned
 // as HTTP responses to the UI.
@@ -33,20 +59,24 @@ func (c *Client) readFromServer() {
 		if lurkMessage, err = lurk.Unmarshal(ba); err != nil {
 			break
 		}
-		c.q <- lurkMessage
+		c.q.Enqueue(lurkMessage)
 	}
 }
 
-// Will attempt to read from the message queue and will time out after 5 seconds.
-func (c *Client) timeoutChannelRead() lurk.LurkMessage {
-	for {
-		select {
-		case msg := <-c.q:
-			return msg
-		case <-time.After(time.Millisecond * 5000): // experiment with this
-			return nil
+func (c *Client) dequeueAll() (lms []lurk.LurkMessage) {
+	start := time.Now()
+	for time.Since(start) < time.Second*5 {
+		lm, err := c.q.Dequeue()
+		if err != nil {
+			if len(lms) != 0 {
+				break
+			}
+			time.Sleep(2 * time.Millisecond) // In hopes of combining messages in a single http response.
+			continue
 		}
+		lms = append(lms, lm)
 	}
+	return
 }
 
 func readAllMessagesInBuffer(conn net.Conn) (messages []lurk.LurkMessage, _ error) {

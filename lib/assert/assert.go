@@ -2,6 +2,7 @@
 package assert
 
 import (
+	"errors"
 	"time"
 )
 
@@ -33,9 +34,23 @@ func (a *Assert) Error(err error) {
 	}
 }
 
+func (a *Assert) ErrorIs(expected, actual error) {
+	a.t.Helper()
+	if !errors.Is(expected, actual) {
+		a.t.Errorf("Error %v expected, got error %v instead", expected, actual)
+	}
+}
+
 func (a *Assert) True(stmt bool) {
 	a.t.Helper()
 	if !stmt {
+		a.t.Error("Condition not True!")
+	}
+}
+
+func (a *Assert) False(stmt bool) {
+	a.t.Helper()
+	if stmt {
 		a.t.Error("Condition not True!")
 	}
 }
