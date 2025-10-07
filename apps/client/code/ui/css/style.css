@@ -122,3 +122,20 @@ button:hover{
     border: 5px solid #000b22;
     padding: 2px;
 }
+
+#game-input-main{
+    display: none;
+    flex-direction: row;
+    justify-content: center;
+    gap: 5px;
+}
+
+.game-input-action-item{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.game-input-action-item input{
+    color: #000b22;
+}

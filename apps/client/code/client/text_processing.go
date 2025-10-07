@@ -33,11 +33,10 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 		case lurk.TypeRoom:
 			room := msg.(*lurk.Room)
 			c.State.room = room
-			c.State.stringifyRooms()
+			c.State.stringifyRoom()
 		case lurk.TypeConnection:
 			connection := msg.(*lurk.Connection)
-			c.State.connections = append(c.State.connections, connection)
-			c.State.stringifyRooms()
+			c.State.Connections += fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
 		case lurk.TypeMessage:
 			message := msg.(*lurk.Message)
 			c.State.Info += lineBreak
@@ -70,17 +69,10 @@ func (c *Client) stringifyCharacters() {
 	}
 }
 
-func (state *ClientState) stringifyRooms() {
+func (state *ClientState) stringifyRoom() {
 	state.Rooms = ""
-	roomsInList := map[uint16]bool{}
+	state.Connections = ""
 	state.Rooms += fmt.Sprintf(roomTemplate, state.room.RoomNumber, state.room.RoomName, state.room.RoomDesc)
-	roomsInList[state.room.RoomNumber] = true
-	for _, connection := range state.connections {
-		if roomsInList[connection.RoomNumber] {
-			continue
-		}
-		state.Rooms += fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
-	}
 }
 
 const characterTemplate = `

@@ -3,6 +3,10 @@ const setupAPI = "/lurk-client/setup/"
 const startAPI = "/lurk-client/start/"
 const updateAPI = "/lurk-client/update/"
 const terminateAPI = "/lurk-client/terminate/"
+const changeRoomAPI = "/lurk-client/change-room/"
+const fightAPI = "/lurk-client/fight/"
+const pvpFightAPI = "/lurk-client/pvp/"
+const messageAPI = "/lurk-client/message"
 
 class Client{
     constructor(id){
@@ -10,6 +14,10 @@ class Client{
         this.startAPI = startAPI+id+"/";
         this.updateAPI = updateAPI+id+"/";
         this.terminateAPI = terminateAPI+id+"/";
+        this.changeRoomAPI = changeRoomAPI+id+"/";
+        this.fightAPI = fightAPI+id+"/";
+        this.pvpFightAPI = pvpFightAPI+id+"/";
+        this.messageAPI = messageAPI+id+"/";
     };
 };
 
@@ -103,11 +111,36 @@ function sendStart(){
             shouldPoll = true;
         })
         hide("input-button");
+        hide("game-input");
+        revealGameInput();
     }catch(e){
         console.error("Could not send start: ", e);
         return
     }finally{
         pollUpdateEP();
+    }
+}
+
+function sendChangeRoom(){
+    try{
+        changeRoom = {
+            roomNumber: document.getElementById("game-input-change-room").value
+        };
+        fetch(client.changeRoomAPI, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(changeRoom)
+        }).then(response =>{
+            if(!response.ok){
+                throw new Error("Bad Response");
+            }
+        })
+    }catch(e){
+        console.error("Could not send change room: ", e)
+        return
     }
 }
 
@@ -117,7 +150,6 @@ async function pollUpdateEP(){
         let response = await fetch(client.updateAPI)
         if(response.status === 200){
             data = await response.json();
-            console.log(response.status)
             updateGame(data);
         }
     }catch(e){

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Clayal10/enders_game/apps/server/code/server"
 	"github.com/Clayal10/enders_game/lib/assert"
@@ -27,19 +26,20 @@ func TestStartingServer(t *testing.T) {
 		}
 	}()
 
-	clientConfig := &Config{
-		Port: fmt.Sprint(serverPort),
-	}
+	t.Run("TestBasicSetup", func(_ *testing.T) {
+		clientConfig := &Config{
+			Port: fmt.Sprint(serverPort),
+		}
 
-	client, err := New(clientConfig)
-	a.NoError(err)
-	a.True(strings.Contains(client.State.Info, "LURK")) // from the version
-	a.True(client.id != 0)
-	a.True(client.id == client.State.Id)
+		client, err := New(clientConfig)
+		a.NoError(err)
+		a.True(strings.Contains(client.State.Info, "LURK")) // from the version
+		a.True(client.id != 0)
+		a.True(client.id == client.State.Id)
 
-	client.Start()
-	defer client.cf()
+		client.Start()
+		defer client.cf()
 
-	time.Sleep(time.Second)
+	})
 
 }

@@ -3,8 +3,10 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
@@ -85,9 +87,50 @@ func (c *Client) registerTerminateEP() {
 		_, err := c.conn.Write(lurk.Marshal(&lurk.Leave{}))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		w.WriteHeader(http.StatusOK)
 		log.Printf("ID:%v terminated from client", c.id)
 		c.cf()
 	})
 }
+
+const changeRoomEP = "/lurk-client/change-room/"
+
+func (c *Client) registerChangeRoomEP() {
+	http.HandleFunc(fmt.Sprintf("%s%d/", changeRoomEP, c.id), func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			return
+		}
+
+		type jsonChangeRoom struct {
+			RoomNumber string `json:"roomNumber"`
+		}
+
+		ba, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		ch := &jsonChangeRoom{}
+		json.Unmarshal(ba, ch)
+		roomNum, err := strconv.ParseInt(ch.RoomNumber, 10, 16)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if _, err = c.conn.Write(lurk.Marshal(&lurk.ChangeRoom{
+			RoomNumber: uint16(roomNum),
+		})); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+}
+
+const fightEP = "/lurk-client/fight/"
+const pvpFightEP = "/lurk-client/pvp/"
+const messageEP = "/lurk-client/message"
