@@ -19,10 +19,10 @@ const (
 (____)\_)__)(____/(____)(__\_)  (____/   \___/\_/\_/\_)(_/(____)
 
 The world has been ravaged by the most feared and despised being known to man, the formic. When it comes down to preventing their second massacre, will you be the one to step up and destroy them?`
-	battleSchoolDesc           = "A place where young children play a game. At least, that is what the media says. The reality is that they will manipulate and contort our lives just to see what we can handle."
+	battleSchoolDesc           = "A place where young children play a game. At least, that is what the media says. The reality is that they will manipulate and contort their lives just to see what we can handle."
 	battleSchoolBarracksDesc   = "The room filled with small children, most of them scared, but none of them trying to show their weakness."
 	battleSchoolGameRoomDesc   = "Many older boys are hunched over the game table, just trying to show off to each other. You may be able to gain some experience if someone would give you the chance."
-	battleSchoolBattleRoomDesc = "A room, 100 cubic meters in size, defying the laws of gravity. With a gate on either side of the room, us children are able to wage war against each other for honor, all the while practicing zero G movement."
+	battleSchoolBattleRoomDesc = "A room, 100 cubic meters in size, defying the laws of gravity. With a gate on either side of the room, the children are able to wage war against each other for honor, all the while practicing zero G movement."
 	formicStarSystemDesc       = "Out here in the cold, dark vastness of space, a world filled with billions of alien life forms lay idle."
 	formicHomeWorldDesc        = "In all of the universe, one could not find a more perfect machine working under the surface of this planet. The queen instructs, and the workers follow. Flawlessly. To see this creature is to be in awe and trembling fear at the same time."
 	erosDesc                   = "The secret base for International Fleet Command operations. The surface is blacked out, covered in solar panels. The inhabitants stay below the surface in the smooth tunnels crafted by the formic race many years ago."
@@ -454,6 +454,14 @@ const defaultWriteTimeout = time.Second
 func (g *game) handleMessage(msg *lurk.Message, conn net.Conn) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
+	if msg.Recipient == narrator {
+		user, ok := g.users[msg.Sender]
+		if !ok {
+			return cross.ErrUserNotInServer
+		}
+		return g.upgradeStats(user, conn)
+	}
 
 	recipient, ok := g.users[msg.Recipient]
 	if !ok {

@@ -86,9 +86,7 @@ func (g *game) sendAllCharacters(room *room, conn net.Conn) (err error) {
 		if user.c.RoomNum != room.r.RoomNumber {
 			continue
 		}
-		if _, err = conn.Write(lurk.Marshal(user.c)); err != nil {
-			break
-		}
+		_, _ = conn.Write(lurk.Marshal(user.c))
 	}
 	return
 }

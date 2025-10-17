@@ -368,6 +368,8 @@ func readUntil(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMes
 	}
 }
 
+// This function sends the server a character and a start, then reads back the returned character
+// and accept messages for said character and start.
 func startClientConnection(a *assert.Assert, cfg *ServerConfig, char *lurk.Character) net.Conn {
 	conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
 	a.NoError(err)

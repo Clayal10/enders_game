@@ -235,4 +235,62 @@ func TestGameActions(t *testing.T) {
 			return strings.Contains(msg.Text, "Xenocide")
 		}, time.Second*100, 20*time.Millisecond)
 	})
+	t.Run("TestUpgradingStats", func(_ *testing.T) {
+		port := cross.GetFreePort()
+		cfg := &ServerConfig{
+			Port: port,
+		}
+
+		cfs, err := New(cfg)
+		a.NoError(err)
+		defer func() {
+			for _, cf := range cfs {
+				cf()
+			}
+		}()
+
+		conn := startClientConnection(a, cfg, &lurk.Character{
+			Name: "Test Guy",
+			Flags: map[string]bool{
+				lurk.Alive: true,
+			},
+			Attack:     50,
+			Defense:    25,
+			Regen:      25,
+			PlayerDesc: "Test guy who will upgrade stats",
+		})
+		_, err = conn.Write(lurk.Marshal(&lurk.ChangeRoom{
+			RoomNumber: battleSchoolGameRoom,
+		}))
+		a.NoError(err)
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+		_, err = conn.Write(lurk.Marshal(&lurk.ChangeRoom{
+			RoomNumber: battleSchool,
+		}))
+		a.NoError(err)
+		_, err = conn.Write(lurk.Marshal(&lurk.ChangeRoom{
+			RoomNumber: battleSchoolBarracks,
+		}))
+		a.NoError(err)
+		a.Eventually(func() bool {
+			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn)
+			a.NoError(err)
+			msg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			fmt.Println(fmt.Sprint(msg.GetType()))
+			if msg.GetType() != lurk.TypeMessage {
+				return false
+			}
+			message := msg.(*lurk.Message)
+			return strings.Contains(message.Text, "upgrade your stats")
+		}, time.Second, time.Millisecond)
+		_ = conn.SetReadDeadline(time.Time{})
+
+	})
 }
