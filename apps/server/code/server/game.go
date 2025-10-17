@@ -149,6 +149,8 @@ func (g *game) createUser(character *lurk.Character, conn net.Conn) string {
 	character.Flags[lurk.Ready] = true
 	character.Flags[lurk.Monster] = false
 	character.Flags[lurk.Alive] = true
+	character.Flags[lurk.Started] = true
+
 	character.RoomNum = battleSchool
 	character.Health = initialHealth
 	character.Gold = 0
@@ -183,26 +185,6 @@ func (g *game) validateCharacter(c *lurk.Character) cross.ErrCode {
 	}
 
 	return cross.NoError
-}
-
-func (g *game) notifyNewArrival(newbie string) error {
-	newUser, ok := g.users[newbie]
-	if !ok {
-		return cross.ErrUserNotInServer
-	}
-	newUser.c.Flags[lurk.Started] = true
-
-	for _, otherUser := range g.users {
-		if otherUser.c.RoomNum != battleSchool {
-			continue
-		}
-		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, otherUser.c.Name,
-			fmt.Sprintf("%s joined battle school!", newUser.c.Name)); err != nil {
-			log.Printf("Could not send message to %s", otherUser.c.Name)
-		}
-	}
-
-	return nil
 }
 
 // An error returned from here results in termination of the client.
@@ -255,8 +237,33 @@ func (g *game) startGameplay(player string, conn net.Conn) error {
 	}
 }
 
+func (g *game) notifyNewArrival(newbie string) error {
+	newUser, ok := g.users[newbie]
+	if !ok {
+		return cross.ErrUserNotInServer
+	}
+
+	for _, otherUser := range g.users {
+		if otherUser.c.RoomNum != battleSchool || otherUser.c.Name == newUser.c.Name {
+			continue
+		}
+		if err := g.sendCharacterUpdate(newUser.c, otherUser.conn, otherUser.c.Name,
+			fmt.Sprintf("%s joined battle school!", newUser.c.Name)); err != nil {
+			log.Printf("Could not send message to %s", otherUser.c.Name)
+		}
+	}
+
+	return nil
+}
+
+const upgradeCost = 50
+
 // A chance to update character stats after each action.
 func (g *game) checkStatusChange(user *user, conn net.Conn) error {
+	if err := askForUpgrade(user); err != nil {
+		return err
+	}
+
 	status := map[uint16]bool{}
 	maps.Copy(status, user.allowedRoom)
 	if user.c.Gold > erosGold {
@@ -279,36 +286,35 @@ func (g *game) checkStatusChange(user *user, conn net.Conn) error {
 	return g.sendConnections(g.rooms[user.c.RoomNum], user.c.Name, conn)
 }
 
-func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) (err error, _ bool) {
-	if player == "TestScript" {
-		log.Printf("TestScript doing %v", lm.GetType())
+func askForUpgrade(user *user) (err error) {
+	if user.c.Gold >= upgradeCost && user.c.RoomNum == battleSchoolBarracks {
+		_, err = user.conn.Write(lurk.Marshal(&lurk.Message{
+			Recipient: user.c.Name,
+			Sender:    narrator,
+			Text: fmt.Sprintf(
+				"Looks like some of your hard work is paying off, spend %d gold to upgrade your stats. (Loot %s to increase all stats by 5)",
+				upgradeCost, narrator),
+			Narration: true,
+		}))
 	}
+	return
+}
+
+func (g *game) messageSelection(lm lurk.LurkMessage, player string, conn net.Conn) (err error, _ bool) {
 	switch lm.GetType() {
 	case lurk.TypeMessage:
-		msg, ok := lm.(*lurk.Message)
-		if !ok {
-			return nil, ok
-		}
+		msg := lm.(*lurk.Message)
 		err = g.handleMessage(msg, conn)
 	case lurk.TypeChangeRoom:
-		msg, ok := lm.(*lurk.ChangeRoom)
-		if !ok {
-			return nil, ok
-		}
+		msg := lm.(*lurk.ChangeRoom)
 		err = g.handleChangeRoom(msg, conn, player)
 	case lurk.TypeFight:
 		err = g.handleFight(conn, player)
 	case lurk.TypePVPFight:
-		msg, ok := lm.(*lurk.PVPFight)
-		if !ok {
-			return nil, ok
-		}
+		msg := lm.(*lurk.PVPFight)
 		err = g.handlePVPFight(msg, conn, player)
 	case lurk.TypeLoot:
-		msg, ok := lm.(*lurk.Loot)
-		if !ok {
-			return nil, ok
-		}
+		msg := lm.(*lurk.Loot)
 		err = g.handleLoot(conn, msg, player)
 	case lurk.TypeLeave:
 		g.handleLeave(player)
@@ -349,4 +355,24 @@ func (g *game) healMonster(monster *lurk.Character) {
 			log.Printf("%s: could not update user %v with updated monster health", err.Error(), user.c.Name)
 		}
 	}
+}
+
+func (g *game) upgradeStats(user *user, conn net.Conn) error {
+	if user.c.Gold < upgradeCost || user.c.RoomNum != battleSchoolBarracks {
+		return g.sendError(conn, cross.StatError, fmt.Sprintf(
+			"You must be in the Battle School Barracks with at least %d gold to upgrade your stats", upgradeCost))
+	}
+	if totalStats := user.c.Attack + user.c.Defense + user.c.Regen; totalStats-15 > statLimit {
+		return g.sendError(conn, cross.StatError, fmt.Sprintf(
+			"Your stat sum of %d is too high to upgrade any further", totalStats))
+	}
+	user.c.Attack += 5
+	user.c.Defense += 5
+	user.c.Regen += 5
+	user.c.Gold -= upgradeCost
+
+	for _, u := range g.users {
+		_, _ = u.conn.Write(lurk.Marshal(user.c))
+	}
+	return nil
 }
