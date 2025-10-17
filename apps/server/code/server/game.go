@@ -364,7 +364,7 @@ func (g *game) upgradeStats(user *user, conn net.Conn) error {
 	}
 	if totalStats := user.c.Attack + user.c.Defense + user.c.Regen; totalStats-15 > statLimit {
 		return g.sendError(conn, cross.StatError, fmt.Sprintf(
-			"You stat sum of %d is too high to upgrade any further", totalStats))
+			"Your stat sum of %d is too high to upgrade any further", totalStats))
 	}
 	user.c.Attack += 5
 	user.c.Defense += 5

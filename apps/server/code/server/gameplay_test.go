@@ -283,7 +283,6 @@ func TestGameActions(t *testing.T) {
 			a.NoError(err)
 			msg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
-			fmt.Println(fmt.Sprint(msg.GetType()))
 			if msg.GetType() != lurk.TypeMessage {
 				return false
 			}
@@ -291,6 +290,41 @@ func TestGameActions(t *testing.T) {
 			return strings.Contains(message.Text, "upgrade your stats")
 		}, time.Second, time.Millisecond)
 		_ = conn.SetReadDeadline(time.Time{})
-
+		_, err = conn.Write(lurk.Marshal(&lurk.Message{
+			Recipient: narrator,
+			Sender:    "Test Guy",
+			Text:      " ",
+		}))
+		a.NoError(err)
+		a.Eventually(func() bool {
+			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn)
+			a.NoError(err)
+			msg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if msg.GetType() != lurk.TypeCharacter {
+				return false
+			}
+			character := msg.(*lurk.Character)
+			return character.Name == "Test Guy" && character.Attack > 50
+		}, time.Second, time.Millisecond)
+		_, err = conn.Write(lurk.Marshal(&lurk.Message{
+			Recipient: narrator,
+			Sender:    "Test Guy",
+			Text:      " ",
+		}))
+		a.NoError(err)
+		a.Eventually(func() bool {
+			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
+			ba, _, err := readSingleMessage(conn)
+			a.NoError(err)
+			msg, err := lurk.Unmarshal(ba)
+			a.NoError(err)
+			if msg.GetType() != lurk.TypeError {
+				return false
+			}
+			e := msg.(*lurk.Error)
+			return e.ErrCode == cross.StatError
+		}, time.Second, time.Millisecond)
 	})
 }
