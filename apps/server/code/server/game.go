@@ -23,7 +23,8 @@ type game struct {
 	// key is room number. Need to be careful about multithreading this
 	rooms map[uint16]*room
 
-	game *lurk.Game
+	game    *lurk.Game
+	version *lurk.Version
 
 	mu           sync.Mutex
 	lastActivity map[string]time.Time
@@ -60,6 +61,18 @@ func newGame() *game {
 		rooms:        make(map[uint16]*room),
 		lastActivity: make(map[string]time.Time),
 		healTimer:    make(map[string]*time.Timer),
+		version: &lurk.Version{
+			Type:  lurk.TypeVersion,
+			Major: 2,
+			Minor: 3,
+		},
+
+		game: &lurk.Game{
+			Type:          lurk.TypeGame,
+			InitialPoints: initialPoints,
+			StatLimit:     statLimit,
+			GameDesc:      gameDescription,
+		},
 	}
 
 	g.createRooms()
@@ -260,6 +273,8 @@ const upgradeCost = 50
 
 // A chance to update character stats after each action.
 func (g *game) checkStatusChange(user *user, conn net.Conn) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	if err := askForUpgrade(user); err != nil {
 		return err
 	}

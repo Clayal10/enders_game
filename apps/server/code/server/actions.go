@@ -17,20 +17,7 @@ const (
 )
 
 func (g *game) sendStart(conn net.Conn) error {
-	version := &lurk.Version{
-		Type:  lurk.TypeVersion,
-		Major: 2,
-		Minor: 3,
-	}
-
-	g.game = &lurk.Game{
-		Type:          lurk.TypeGame,
-		InitialPoints: initialPoints,
-		StatLimit:     statLimit,
-		GameDesc:      gameDescription,
-	}
-
-	if _, err := conn.Write(lurk.Marshal(version)); err != nil {
+	if _, err := conn.Write(lurk.Marshal(g.version)); err != nil {
 		return err
 	}
 
