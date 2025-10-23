@@ -292,7 +292,7 @@ func askForUpgrade(user *user) (err error) {
 			Recipient: user.c.Name,
 			Sender:    narrator,
 			Text: fmt.Sprintf(
-				"Looks like some of your hard work is paying off, spend %d gold to upgrade your stats. (Loot %s to increase all stats by 5)",
+				"Looks like some of your hard work is paying off, spend %d gold to upgrade your stats. (Message %s to increase all stats by 5 points)",
 				upgradeCost, narrator),
 			Narration: true,
 		}))
