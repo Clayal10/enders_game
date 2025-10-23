@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Clayal10/enders_game/lib/cross"
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 // game holds all information and methods needed to create a game that complies to the

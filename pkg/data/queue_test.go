@@ -3,9 +3,9 @@ package data_test
 import (
 	"testing"
 
-	"github.com/Clayal10/enders_game/lib/assert"
-	"github.com/Clayal10/enders_game/lib/cross"
-	"github.com/Clayal10/enders_game/lib/data"
+	"github.com/Clayal10/enders_game/pkg/assert"
+	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/data"
 )
 
 func TestBasicQueuing(t *testing.T) {

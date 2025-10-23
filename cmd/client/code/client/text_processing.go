@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 // Each field correlates to a section of the UI that should be updated in the JS.

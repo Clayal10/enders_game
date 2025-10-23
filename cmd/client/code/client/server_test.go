@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Clayal10/enders_game/apps/server/code/server"
-	"github.com/Clayal10/enders_game/lib/assert"
-	"github.com/Clayal10/enders_game/lib/cross"
+	"github.com/Clayal10/enders_game/cmd/server/code/server"
+	"github.com/Clayal10/enders_game/pkg/assert"
+	"github.com/Clayal10/enders_game/pkg/cross"
 )
 
 func TestStartingServer(t *testing.T) {

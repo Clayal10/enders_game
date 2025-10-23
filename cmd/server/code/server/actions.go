@@ -3,8 +3,8 @@ package server
 import (
 	"net"
 
-	"github.com/Clayal10/enders_game/lib/cross"
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 // These functions may need thread protection before getting called.

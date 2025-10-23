@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/Clayal10/enders_game/lib/cross"
+	"github.com/Clayal10/enders_game/pkg/cross"
 )
 
 type MessageType byte

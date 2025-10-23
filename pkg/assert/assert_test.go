@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Clayal10/enders_game/lib/assert"
-	"github.com/Clayal10/enders_game/lib/cross"
+	"github.com/Clayal10/enders_game/pkg/assert"
+	"github.com/Clayal10/enders_game/pkg/cross"
 )
 
 type mockAssert struct{}

@@ -1,6 +1,6 @@
 package data
 
-import "github.com/Clayal10/enders_game/lib/cross"
+import "github.com/Clayal10/enders_game/pkg/cross"
 
 type Queue[T any] struct {
 	q       []T

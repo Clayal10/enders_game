@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 // Endpoints used for post methods will not write back any data to the UI.

@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Clayal10/enders_game/apps/server/code/server"
+	"github.com/Clayal10/enders_game/cmd/server/code/server"
 )
 
 const (

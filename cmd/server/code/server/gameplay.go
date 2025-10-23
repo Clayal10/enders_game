@@ -6,8 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/Clayal10/enders_game/lib/cross"
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 // Descriptions / long text.

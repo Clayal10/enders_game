@@ -20,7 +20,7 @@ For custom configuration options, a `Config.json` file may be present in the dir
 
 ## Client Interface
 
-For a description on all message types denoted in brackets, (e.g. [CHARACTER]), visit the [Lurk Library](../../../lib/lurk/README.md)
+For a description on all message types denoted in brackets, (e.g. [CHARACTER]), visit the [Lurk Library](../../../pkg/lurk/README.md)
 
 ### Initial Connection
 

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Clayal10/enders_game/lib/assert"
-	"github.com/Clayal10/enders_game/lib/cross"
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/assert"
+	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 func TestUnmarshalAndMarshal(t *testing.T) {

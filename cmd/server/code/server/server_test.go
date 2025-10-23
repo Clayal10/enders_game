@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Clayal10/enders_game/lib/assert"
-	"github.com/Clayal10/enders_game/lib/cross"
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/assert"
+	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 // Global byte buffer for log checking.

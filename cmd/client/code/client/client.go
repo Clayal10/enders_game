@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Clayal10/enders_game/lib/data"
-	"github.com/Clayal10/enders_game/lib/lurk"
+	"github.com/Clayal10/enders_game/pkg/data"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 // Client contains all data needed to run a client instance.
