@@ -173,7 +173,7 @@ function sendLoot(){
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
-            body: json.stringify(loot)
+            body: JSON.stringify(loot)
         }).then(response => {
             if(!response.ok){
                 throw new Error("Bad Response");
