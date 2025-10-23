@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/Clayal10/enders_game/lib/cross"
@@ -13,7 +12,6 @@ import (
 
 type receiver struct {
 	listener *net.TCPListener
-	mu       sync.Mutex
 	// queue for messages
 	shouldRun bool
 	*game
