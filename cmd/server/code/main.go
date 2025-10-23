@@ -14,7 +14,7 @@ const (
 )
 
 var (
-	cfg = &server.ServerConfig{
+	cfg = &server.Config{
 		Port: defaultPort,
 	}
 )

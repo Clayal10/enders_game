@@ -72,7 +72,7 @@ func TestGameActions(t *testing.T) {
 	})
 	t.Run("TestPVPFight", func(_ *testing.T) {
 		port := cross.GetFreePort()
-		cfg := &ServerConfig{
+		cfg := &Config{
 			Port: port,
 		}
 
@@ -174,7 +174,7 @@ func TestGameActions(t *testing.T) {
 	})
 	t.Run("TestKillingHiveQueenCocoon", func(_ *testing.T) {
 		port := cross.GetFreePort()
-		cfg := &ServerConfig{
+		cfg := &Config{
 			Port: port,
 		}
 
@@ -237,7 +237,7 @@ func TestGameActions(t *testing.T) {
 	})
 	t.Run("TestUpgradingStats", func(_ *testing.T) {
 		port := cross.GetFreePort()
-		cfg := &ServerConfig{
+		cfg := &Config{
 			Port: port,
 		}
 

@@ -14,7 +14,7 @@ func TestStartingServer(t *testing.T) {
 	a := assert.New(t)
 	serverPort := cross.GetFreePort()
 
-	serverConfig := &server.ServerConfig{
+	serverConfig := &server.Config{
 		Port: serverPort,
 	}
 
