@@ -5,31 +5,7 @@ import (
 	"log"
 	"net"
 	"time"
-
-	"github.com/Clayal10/enders_game/lib/lurk"
 )
-
-// Each field correlates to a section of the UI that should be updated in the JS.
-// This struct will be json'd and each field should be added to the innerHTML of the HTML element,
-// and should not overwrite the data already in it.
-type ClientState struct {
-	Info        string `json:"info"`
-	Rooms       string `json:"rooms"`
-	Connections string `json:"connections"`
-	Players     string `json:"players"`
-	Id          int64  `json:"id"`
-
-	characters       []*lurk.Character // key is name
-	uniqueCharacters map[string]int
-	room             *lurk.Room
-}
-
-func newClientState(id int64) *ClientState {
-	return &ClientState{
-		Id:               id,
-		uniqueCharacters: map[string]int{},
-	}
-}
 
 type Config struct {
 	Hostname, Port string
@@ -66,6 +42,8 @@ func (c *Client) registerEndpoints() {
 	c.registerUpdateEP()
 	c.registerTerminateEP()
 	c.registerChangeRoomEP()
+	c.registerFightEP()
+	c.registerLootEP()
 	// register more.
 	log.Printf("Registered endpoints for ID:%d", c.id)
 }

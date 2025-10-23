@@ -2,11 +2,35 @@ package client
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Clayal10/enders_game/lib/lurk"
 )
 
-// updateClientState will take a slice of LurkMessage interface objects and return a ClientUpdate with
+// Each field correlates to a section of the UI that should be updated in the JS.
+// This struct will be json'd and each field should be added to the innerHTML of the HTML element,
+// and should not overwrite the data already in it.
+type ClientState struct {
+	Info        string `json:"info"`
+	Rooms       string `json:"rooms"`
+	Connections string `json:"connections"`
+	Players     string `json:"players"`
+	Id          int64  `json:"id"`
+
+	characters       []*lurk.Character // key is name
+	uniqueCharacters map[string]int
+
+	room *lurk.Room
+}
+
+func newClientState(id int64) *ClientState {
+	return &ClientState{
+		Id:               id,
+		uniqueCharacters: map[string]int{},
+	}
+}
+
+// updateClientState will take a slice of LurkMessage interface objects and modifies the ClientUpdate field with
 // the proper text fields.
 func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 	for _, msg := range lurkMessages {
@@ -36,7 +60,11 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			c.State.stringifyRoom()
 		case lurk.TypeConnection:
 			connection := msg.(*lurk.Connection)
-			c.State.Connections += fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
+
+			newConnection := fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
+			if !strings.Contains(c.State.Connections, newConnection) {
+				c.State.Connections += newConnection
+			}
 		case lurk.TypeMessage:
 			message := msg.(*lurk.Message)
 			c.State.Info += lineBreak
@@ -54,18 +82,22 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 }
 
 func (c *Client) stringifyCharacters() {
-	c.State.Players = fmt.Sprintf(userTemplate, c.character.Name, c.character.Attack, c.character.Defense, c.character.Health)
+	c.State.Players = fmt.Sprintf(userTemplate, c.character.Name, c.character.Attack, c.character.Defense, c.character.Health, c.character.Gold)
 	namesInList := map[string]bool{}
 	for i, character := range c.State.characters {
 		if character.RoomNum != c.character.RoomNum || namesInList[character.Name] || c.State.uniqueCharacters[character.Name] != i || character.Name == c.character.Name {
 			continue
 		}
 		namesInList[character.Name] = true
-		if character.Flags[lurk.Monster] {
+
+		switch {
+		case !character.Flags[lurk.Alive]:
+			c.State.Players += fmt.Sprintf(deadEntity, character.Name)
+		case character.Flags[lurk.Monster]:
 			c.State.Players += fmt.Sprintf(monsterTemplate, character.Name, character.Attack, character.Defense, character.Health)
-			continue
+		default:
+			c.State.Players += fmt.Sprintf(characterTemplate, character.Name, character.Attack, character.Defense, character.Health, character.Gold)
 		}
-		c.State.Players += fmt.Sprintf(characterTemplate, character.Name, character.Attack, character.Defense, character.Health)
 	}
 }
 
@@ -80,6 +112,7 @@ const characterTemplate = `
   | Attack: %v
   | Defense: %v
   | Health: %v
+  | Gold: %v
   `
 
 const monsterTemplate = `
@@ -94,7 +127,13 @@ const userTemplate = `
   | Attack: %v
   | Defense: %v
   | Health: %v
+  | Gold: %v
   `
+
+const deadEntity = `
+<span style="background-color: red; color: white;">%s</span>
+`
+
 const errorTemplate = `
 <span style="color: red;">Error #%d</span>: %s
 `

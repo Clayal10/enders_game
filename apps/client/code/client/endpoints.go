@@ -132,5 +132,54 @@ func (c *Client) registerChangeRoomEP() {
 }
 
 const fightEP = "/lurk-client/fight/"
+
+func (c *Client) registerFightEP() {
+	http.HandleFunc(fmt.Sprintf("%s%d/", fightEP, c.id), func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			return
+		}
+
+		if _, err := c.conn.Write(lurk.Marshal(&lurk.Fight{})); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+}
+
+const lootEP = "/lurk-client/loot/"
+
+func (c *Client) registerLootEP() {
+	http.HandleFunc(fmt.Sprintf("%s%d/", lootEP, c.id), func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			return
+		}
+
+		type jsonLoot struct {
+			TargetName string `json:"target"`
+		}
+
+		ba, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		loot := &jsonLoot{}
+		if err = json.Unmarshal(ba, loot); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if _, err := c.conn.Write(lurk.Marshal(&lurk.Loot{
+			TargetName: loot.TargetName,
+		})); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+}
+
 const pvpFightEP = "/lurk-client/pvp/"
 const messageEP = "/lurk-client/message"

@@ -68,8 +68,8 @@ button:hover{
     min-width: 600px;
     width: 90%;
     margin: auto;
-    margin-top: 1em;
-    background-color: #001540;
+    margin-top: 0;
+    background-color: #00316e;
     border-radius: 10px;
     padding: 1em;
     height: 67%;
@@ -119,14 +119,16 @@ button:hover{
 }
 
 #game-info pre{
-    border: 5px solid #000b22;
-    padding: 2px;
+    border-radius: 10px;
+    margin: 2px;
+    background-color: #001540;
+    padding: 3px;
 }
 
 #game-input-main{
     display: none;
     flex-direction: row;
-    justify-content: center;
+    justify-content: space-around;
     gap: 5px;
 }
 

@@ -279,7 +279,7 @@ func TestGameActions(t *testing.T) {
 		a.NoError(err)
 		a.Eventually(func() bool {
 			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn)
+			ba, _, err := lurk.ReadSingleMessage(conn)
 			a.NoError(err)
 			msg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
@@ -298,7 +298,7 @@ func TestGameActions(t *testing.T) {
 		a.NoError(err)
 		a.Eventually(func() bool {
 			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn)
+			ba, _, err := lurk.ReadSingleMessage(conn)
 			a.NoError(err)
 			msg, err := lurk.Unmarshal(ba)
 			a.NoError(err)
@@ -316,7 +316,7 @@ func TestGameActions(t *testing.T) {
 		a.NoError(err)
 		a.Eventually(func() bool {
 			_ = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
-			ba, _, err := readSingleMessage(conn)
+			ba, _, err := lurk.ReadSingleMessage(conn)
 			a.NoError(err)
 			msg, err := lurk.Unmarshal(ba)
 			a.NoError(err)

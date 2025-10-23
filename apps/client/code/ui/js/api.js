@@ -5,8 +5,9 @@ const updateAPI = "/lurk-client/update/"
 const terminateAPI = "/lurk-client/terminate/"
 const changeRoomAPI = "/lurk-client/change-room/"
 const fightAPI = "/lurk-client/fight/"
+const lootAPI = "/lurk-client/loot/"
 const pvpFightAPI = "/lurk-client/pvp/"
-const messageAPI = "/lurk-client/message"
+const messageAPI = "/lurk-client/message/"
 
 class Client{
     constructor(id){
@@ -16,6 +17,7 @@ class Client{
         this.terminateAPI = terminateAPI+id+"/";
         this.changeRoomAPI = changeRoomAPI+id+"/";
         this.fightAPI = fightAPI+id+"/";
+        this.lootAPI = lootAPI+id+"/";
         this.pvpFightAPI = pvpFightAPI+id+"/";
         this.messageAPI = messageAPI+id+"/";
     };
@@ -72,7 +74,6 @@ function sendConfig(){
         setupDisplay(); // For character input.
     }catch(e){
         console.error("Could not send config: ", e);
-        return
     }
 }
 
@@ -89,7 +90,6 @@ function sendTerminate(){
         })
     }catch(e){
         console.error("Could not send terminate: ", e)
-        return
     }
 }
 
@@ -139,8 +139,48 @@ function sendChangeRoom(){
             }
         })
     }catch(e){
-        console.error("Could not send change room: ", e)
-        return
+        console.error("Could not send change room: ", e);
+    }
+}
+
+function sendFight(){
+    try{
+        fetch(client.fightAPI, {
+            method: 'POST',
+            headers:{
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({})
+        }).then(response => {
+            if(!response.ok){
+                throw new Error("Bad Response");
+            }
+        })
+    }catch(e){
+        console.error("Could not initiate fight: ", e);
+    }
+}
+
+function sendLoot(){
+    try{
+        loot = {
+            target: document.getElementById("game-input-loot").value
+        }
+        fetch(client.lootAPI, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: json.stringify(loot)
+        }).then(response => {
+            if(!response.ok){
+                throw new Error("Bad Response");
+            }
+        })
+    }catch(e){
+        console.error("Could not loot target: ", e);
     }
 }
 
