@@ -102,6 +102,14 @@ func readAllMessagesInBuffer(conn net.Conn) (messages []lurk.LurkMessage, _ erro
 	}
 }
 
+type jsonCharacter struct {
+	Name        string `json:"name"`
+	Attack      string `json:"attack"`
+	Defense     string `json:"defense"`
+	Regen       string `json:"regen"`
+	Description string `json:"description"`
+}
+
 func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error) {
 	if body == nil {
 		return &lurk.Character{
@@ -112,14 +120,6 @@ func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error)
 			},
 			PlayerDesc: "Character",
 		}, nil
-	}
-
-	type jsonCharacter struct {
-		Name        string `json:"name"`
-		Attack      string `json:"attack"`
-		Defense     string `json:"defense"`
-		Regen       string `json:"regen"`
-		Description string `json:"description"`
 	}
 
 	ba, err := io.ReadAll(body)
