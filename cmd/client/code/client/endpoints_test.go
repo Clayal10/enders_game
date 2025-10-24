@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/Clayal10/enders_game/cmd/server/code/server"
 	"github.com/Clayal10/enders_game/pkg/assert"
@@ -19,7 +20,9 @@ func TestHittingEndpoints(t *testing.T) {
 		Port: serverPort,
 	})
 	a.NoError(err)
+	pollTime = time.Millisecond
 	defer func() {
+		pollTime = 5 * time.Second
 		for _, cf := range cfs {
 			cf()
 		}
@@ -33,7 +36,8 @@ func TestHittingEndpoints(t *testing.T) {
 	})
 	a.NoError(err)
 	client.Start()
-	tests := createTests(fmt.Sprint(client.id))
+
+	tests := createGameActions(fmt.Sprint(client.id))
 	for _, test := range tests {
 		t.Run(test.name, func(_ *testing.T) {
 			resp, err := http.Post(fmt.Sprintf("http://localhost:%v%s", clientPort, test.endpoint), "application/json", bytes.NewBuffer(test.payload))
@@ -44,24 +48,115 @@ func TestHittingEndpoints(t *testing.T) {
 	}
 }
 
-type test struct {
+type gameAction struct {
 	name     string
 	endpoint string
 	expected int
 	payload  []byte
 }
 
-func createTests(id string) []test {
+func createGameActions(id string) []gameAction {
 	id += "/"
 	startBA, _ := json.Marshal(&jsonCharacter{
 		"tester", "25", "25", "25", "test",
 	})
-	return []test{
+	startBadBA, _ := json.Marshal(&jsonCharacter{
+		"tester", "huh", "25", "25", "test",
+	})
+	return []gameAction{
 		{
 			"happy start",
 			startEP + id,
 			http.StatusOK,
 			startBA,
+		},
+		{
+			"unhappy start",
+			startEP + id,
+			http.StatusBadRequest,
+			startBadBA,
+		},
+		{
+			"update happy",
+			updateEP + id,
+			http.StatusOK,
+			[]byte("{}"),
+		},
+		{
+			"update no content",
+			updateEP + id,
+			http.StatusNoContent,
+			[]byte("{}"),
+		},
+		{
+			"changeroom happy",
+			changeRoomEP + id,
+			http.StatusOK,
+			[]byte(`{"roomNumber": "3"}`),
+		},
+		{
+			"changeroom unhappy",
+			changeRoomEP + id,
+			http.StatusBadRequest,
+			[]byte(`{"roomNumber": "huh"}`),
+		},
+		{
+			"fight happy",
+			fightEP + id,
+			http.StatusOK,
+			[]byte("{}"),
+		},
+		{
+			"loot happy",
+			lootEP + id,
+			http.StatusOK,
+			[]byte(`{"target": "test"}`),
+		},
+		{
+			"loot unhappy",
+			lootEP + id,
+			http.StatusBadRequest,
+			[]byte(`{"Targe"}`),
+		},
+		{
+			"pvp happy",
+			pvpFightEP + id,
+			http.StatusOK,
+			[]byte(`{"target": "test"}`),
+		},
+		{
+			"pvp unhappy",
+			pvpFightEP + id,
+			http.StatusBadRequest,
+			[]byte(`{"tar "test"`),
+		},
+		{
+			"message happy",
+			messageEP + id,
+			http.StatusOK,
+			[]byte(`{
+				"recipient": "test",
+				"text": "Test!"
+			}`),
+		},
+		{
+			"message unhappy",
+			messageEP + id,
+			http.StatusBadRequest,
+			[]byte(`"Test!"
+			}`),
+		},
+		{
+			"update happy",
+			updateEP + id,
+			http.StatusOK,
+			[]byte("{}"),
+		},
+		{
+			"happy terminate", // call at the end
+			terminateEP + id,
+			http.StatusOK,
+			[]byte("{}"),
 		},
 	}
 }

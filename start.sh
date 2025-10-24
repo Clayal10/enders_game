@@ -32,13 +32,13 @@ start_client(){
 
     echo "Building Client"
 
-    cd apps/client/code
-    go build -o enders_game_client .
-    mv enders_game_client ../../../bin/
+    cd cmd/client/code
+    go build -o colonel_graph .
+    mv colonel_graph ../../../bin/
     cd ../../../bin/
 
     echo "Starting Client"
-    nohup ./enders_game_client &
+    nohup ./colonel_graph &
 
     echo "Client successfully started"
     exit
@@ -67,7 +67,7 @@ check=0
 while [ $check == 0 ]; do
     read -p "Client (1) or Server (2)?: " option
     if [ $option == 1 ]; then
-        stop_option enders_game_client
+        stop_option colonel_graph
         start_client
         break
     fi

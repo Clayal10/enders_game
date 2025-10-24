@@ -14,7 +14,7 @@ import (
 const setupEP = "/lurk-client/setup/"
 
 const defaultPort = 5068
-const staticDir = "../apps/client/code/ui" // exe must be in root of repo
+const staticDir = "../cmd/client/code/ui" // exe must be in root of repo
 
 func main() {
 	http.HandleFunc(setupEP, handleSetup)

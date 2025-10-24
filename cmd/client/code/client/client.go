@@ -63,9 +63,11 @@ func (c *Client) readFromServer() {
 	}
 }
 
+var pollTime = 5 * time.Second
+
 func (c *Client) dequeueAll() (lms []lurk.LurkMessage) {
 	start := time.Now()
-	for time.Since(start) < time.Second*5 {
+	for time.Since(start) < pollTime {
 		lm, err := c.q.Dequeue()
 		if err != nil {
 			if len(lms) != 0 {

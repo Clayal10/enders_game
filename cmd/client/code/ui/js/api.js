@@ -184,6 +184,51 @@ function sendLoot(){
     }
 }
 
+function sendPVP(){
+    try{
+        pvp = {
+            target: document.getElementById("game-input-pvp-fight").value
+        }
+        fetch(client.pvpFightAPI, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(pvp)
+        }).then(response => {
+            if(!response.ok){
+                throw new Error("Bad Response");
+            }
+        })
+    }catch(e){
+        console.error("Could not pvp fight: ", e)
+    }
+}
+
+function sendMessage(){
+    try{
+        msg = {
+            recipient: document.getElementById("game-input-message-recipient").value,
+            text: document.getElementById("game-input-message").value
+        }
+        fetch(client.messageAPI, {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(msg)
+        }).then(response => {
+            if(!response.ok){
+                throw new Error("Bad Response");
+            }
+        })
+    }catch(e){
+        console.error("Could not send message: ", e)
+    }
+}
+
 var shouldPoll = true;
 async function pollUpdateEP(){
     try{

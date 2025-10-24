@@ -44,6 +44,8 @@ func (c *Client) registerEndpoints() {
 	c.registerChangeRoomEP()
 	c.registerFightEP()
 	c.registerLootEP()
+	c.registerPvpEP()
+	c.registerMessageEP()
 	// register more.
 	log.Printf("Registered endpoints for ID:%d", c.id)
 }
