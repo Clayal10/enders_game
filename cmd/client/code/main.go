@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/Clayal10/enders_game/cmd/client/code/client"
 )
@@ -18,7 +19,9 @@ const staticDir = "../cmd/client/code/ui" // exe must be in root of repo
 
 func main() {
 	http.HandleFunc(setupEP, handleSetup)
-	serve()
+	if err := serve(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func handleSetup(w http.ResponseWriter, r *http.Request) {
@@ -62,12 +65,24 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 	c.Start()
 }
 
+const (
+	certFile = "~/certificate/isoptera.lcsc.edu/fullchain20.pem"
+	keyFile  = "~/certificate/isoptera.lcsc.edu/privkey20.pem"
+)
+
 func serve() error {
 	http.HandleFunc("/", mainPageHandler)
 	fs := http.FileServer(http.Dir(staticDir))
 	http.Handle("/ui/", http.StripPrefix("/ui/", fs))
 
-	return http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", defaultPort), nil)
+	_, certErr := os.Stat(certFile)
+	_, keyErr := os.Stat(keyFile)
+	if certErr != nil || keyErr != nil {
+		log.Println("Serving over HTTP")
+		return http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", defaultPort), nil)
+	}
+	log.Println("Serving over HTTPS")
+	return http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%v", defaultPort), certFile, keyFile, nil)
 }
 
 func mainPageHandler(w http.ResponseWriter, req *http.Request) {

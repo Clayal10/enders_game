@@ -38,7 +38,7 @@ start_client(){
     cd ../../../bin/
 
     echo "Starting Client"
-    nohup ./colonel_graph &
+    nohup ./colonel_graph > client.out &
 
     echo "Client successfully started"
     exit
@@ -56,7 +56,7 @@ start_server(){
     cd ../../../bin/
 
     echo "Starting Ender's Game Server"
-    nohup ./enders_game &
+    nohup ./enders_game > server.out &
 
     echo "Server successfully started"
     exit

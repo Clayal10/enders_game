@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Config uses a string value for port since it is being received as a JSON object.
 type Config struct {
 	Hostname, Port string
 }

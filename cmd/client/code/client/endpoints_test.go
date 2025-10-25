@@ -29,6 +29,7 @@ func TestHittingEndpoints(t *testing.T) {
 	}()
 
 	clientPort := cross.GetFreePort()
+	//nolint:errcheck // In a test.
 	go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", clientPort), nil)
 
 	client, err := New(&Config{
@@ -43,7 +44,7 @@ func TestHittingEndpoints(t *testing.T) {
 			resp, err := http.Post(fmt.Sprintf("http://localhost:%v%s", clientPort, test.endpoint), "application/json", bytes.NewBuffer(test.payload))
 			a.NoError(err)
 			a.True(resp.StatusCode == test.expected)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		})
 	}
 }

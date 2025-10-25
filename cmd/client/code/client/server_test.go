@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 
@@ -41,5 +42,28 @@ func TestStartingServer(t *testing.T) {
 		defer client.cf()
 
 	})
+	t.Run("TestBadDial", func(_ *testing.T) {
+		clientConfig := &Config{
+			Port: "100000000",
+		}
+		_, err = New(clientConfig)
+		a.Error(err)
+	})
+	t.Run("TestBadConnection", func(_ *testing.T) {
+		badPort := cross.GetFreePort()
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", badPort))
+		a.NoError(err)
 
+		go func() {
+			conn, err := l.Accept()
+			a.NoError(err)
+			_, _ = conn.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF}) // give a bad response.
+		}()
+
+		clientConfig := &Config{
+			Port: fmt.Sprintf("%d", badPort),
+		}
+		_, err = New(clientConfig)
+		a.Error(err)
+	})
 }

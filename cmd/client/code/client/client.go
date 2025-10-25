@@ -83,7 +83,8 @@ func (c *Client) dequeueAll() (lms []lurk.LurkMessage) {
 
 func readAllMessagesInBuffer(conn net.Conn) (messages []lurk.LurkMessage, _ error) {
 	for {
-		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		// errors will get taken care of in the message read.
+		_ = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 		defer func() {
 			_ = conn.SetReadDeadline(time.Time{})
 		}()
@@ -116,7 +117,7 @@ func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error)
 	if body == nil {
 		return &lurk.Character{
 			Type: lurk.TypeCharacter,
-			Name: fmt.Sprintf("Client %d", c.id),
+			Name: fmt.Sprintf("Character %d", c.id),
 			Flags: map[string]bool{
 				lurk.Ready: true,
 			},

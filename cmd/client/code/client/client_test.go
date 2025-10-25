@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Clayal10/enders_game/pkg/assert"
@@ -23,4 +24,13 @@ func TestQueueReading(t *testing.T) {
 	loot, ok := messages[2].(*lurk.Loot)
 	a.True(ok)
 	a.True(loot.TargetName == "test")
+}
+
+func TestDefaultCharacter(t *testing.T) {
+	a := assert.New(t)
+
+	c := newClient(nil, 1)
+	character, err := c.getOrMakeCharacter(nil)
+	a.NoError(err)
+	a.True(strings.Contains(character.Name, "Character 1"))
 }

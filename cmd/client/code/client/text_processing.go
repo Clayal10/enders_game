@@ -82,7 +82,7 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 }
 
 func (c *Client) stringifyCharacters() {
-	c.State.Players = fmt.Sprintf(userTemplate, c.character.Name, c.character.Attack, c.character.Defense, c.character.Health, c.character.Gold)
+	c.State.Players = fmt.Sprintf(userTemplate, c.character.Name, c.character.Attack, c.character.Defense, c.character.Regen, c.character.Health, c.character.Gold)
 	namesInList := map[string]bool{}
 	for i, character := range c.State.characters {
 		if character.RoomNum != c.character.RoomNum || namesInList[character.Name] || c.State.uniqueCharacters[character.Name] != i || character.Name == c.character.Name {
@@ -94,9 +94,9 @@ func (c *Client) stringifyCharacters() {
 		case !character.Flags[lurk.Alive]:
 			c.State.Players += fmt.Sprintf(deadEntity, character.Name)
 		case character.Flags[lurk.Monster]:
-			c.State.Players += fmt.Sprintf(monsterTemplate, character.Name, character.Attack, character.Defense, character.Health)
+			c.State.Players += fmt.Sprintf(monsterTemplate, character.Name, character.Attack, character.Defense, character.Regen, character.Health)
 		default:
-			c.State.Players += fmt.Sprintf(characterTemplate, character.Name, character.Attack, character.Defense, character.Health, character.Gold)
+			c.State.Players += fmt.Sprintf(characterTemplate, character.Name, character.Attack, character.Defense, character.Regen, character.Health, character.Gold)
 		}
 	}
 }
@@ -111,6 +111,7 @@ const characterTemplate = `
 %s
   | Attack: %v
   | Defense: %v
+  | Regen: %v
   | Health: %v
   | Gold: %v
   `
@@ -119,6 +120,7 @@ const monsterTemplate = `
 <span style="color: red;">%s</span>
   | Attack: %v
   | Defense: %v
+  | Regen: %v
   | Health: %v
   `
 
@@ -126,6 +128,7 @@ const userTemplate = `
 <span style="color: green;">%s</span>
   | Attack: %v
   | Defense: %v
+  | Regen: %v
   | Health: %v
   | Gold: %v
   `

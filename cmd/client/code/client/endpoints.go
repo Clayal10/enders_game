@@ -99,7 +99,10 @@ func (c *Client) registerChangeRoomEP() {
 		}
 
 		ch := &jsonChangeRoom{}
-		json.Unmarshal(ba, ch)
+		if err := json.Unmarshal(ba, ch); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		roomNum, err := strconv.ParseInt(ch.RoomNumber, 10, 16)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
