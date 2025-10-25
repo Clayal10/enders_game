@@ -123,9 +123,11 @@ function sendStart(){
 
 function sendChangeRoom(){
     try{
-        changeRoom = {
-            roomNumber: document.getElementById("game-input-change-room").value
+        let changeRoomElement = document.getElementById("game-input-change-room")
+        let changeRoom = {
+            roomNumber: changeRoomElement.value
         };
+        changeRoomElement.value = "";
         fetch(client.changeRoomAPI, {
             method: 'POST',
             headers: {
@@ -164,9 +166,12 @@ function sendFight(){
 
 function sendLoot(){
     try{
+        let lootElement = document.getElementById("game-input-loot")
         loot = {
-            target: document.getElementById("game-input-loot").value
+            target: lootElement.value
         }
+        lootElement.value = "";
+
         fetch(client.lootAPI, {
             method: "POST",
             headers: {
@@ -186,9 +191,12 @@ function sendLoot(){
 
 function sendPVP(){
     try{
-        pvp = {
-            target: document.getElementById("game-input-pvp-fight").value
+        let pvpElement = document.getElementById("game-input-pvp-fight");
+        let pvp = {
+            target: pvpElement.value
         }
+        pvpElement.value = "";
+
         fetch(client.pvpFightAPI, {
             method: "POST",
             headers: {
@@ -208,10 +216,15 @@ function sendPVP(){
 
 function sendMessage(){
     try{
-        msg = {
-            recipient: document.getElementById("game-input-message-recipient").value,
-            text: document.getElementById("game-input-message").value
+        let msgElement = document.getElementById("game-input-message-recipient")
+        let msgMessage = document.getElementById("game-input-message")
+        let msg = {
+            recipient: msgElement.value,
+            text: msgMessage.value
         }
+        msgElement.value = "";
+        msgMessage.value = "";
+
         fetch(client.messageAPI, {
             method: "POST",
             headers: {

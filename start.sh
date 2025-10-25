@@ -50,7 +50,7 @@ start_server(){
 
     echo "Building Ender's Game Server"
 
-    cd apps/server/code
+    cd cmd/server/code
     go build -o enders_game .
     mv enders_game ../../../bin/
     cd ../../../bin/
