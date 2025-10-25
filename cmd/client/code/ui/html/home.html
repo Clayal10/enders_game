@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="/ui/css/style.css" />
+        <title>Lurk Client</title>
+    </head>
+    <body>
+        <main>
+            <div id="input-landing">
+                <form>
+                    <label>Enter a Hostname (default <i>isoptera.lcsc.edu</i>): </label>
+                    <input type="text" id="input-hostname">
+                    <label>Enter a Port: </label>
+                    <input type="text" id="input-port">
+                </form>
+                <button onclick="sendConfig()" id="submit-button">Connect to a Lurk Server</button>
+                <button onclick="sendTerminate()" id="terminate-button" class="hidden">Disconnect</button>
+            </div>
+            <div id="game-display">
+                <div id="game-info">
+                    <pre id="game-players"></pre>
+                    <pre id="game-text"></pre>
+                    <pre id="game-rooms"></pre>
+                </div>
+            </div>
+            <div id="game-input" class="hidden">
+                <label id="input-label"class="hidden"></label>
+                <input type="text" id="input-text" class="hidden">
+                <!--Character Input buttons-->
+                <button id="input-button" onclick="sendStart()" class="hidden">Start</button>
+                <button id="input-button-name" onclick="addName()" class="hidden">Next</button>
+                <button id="input-button-attack" onclick="addAttack()" class="hidden">Next</button>
+                <button id="input-button-defense" onclick="addDefense()" class="hidden">Next</button>
+                <button id="input-button-regen" onclick="addRegen()" class="hidden">Next</button>
+                <button id="input-button-description" onclick="addDescription()" class="hidden">Next</button>
+                <!--Move room buttons-->
+            </div>
+            <div id="game-input-main">
+                <div class="game-input-action-item">
+                    <button onclick="sendChangeRoom()">Change Room</button>
+                    <input type="number" id="game-input-change-room">
+                </div>
+                <div class="game-input-action-item">
+                    <button onclick="sendFight()">Fight</button>
+                </div>
+                <div class="game-input-action-item">
+                    <button onclick="sendLoot()">Loot</button>
+                    <input type="text" id="game-input-loot">
+                </div>
+                <div class="game-input-action-item">
+                    <button onclick="sendPVP()">PVP Fight</button>
+                    <input type="text" id="game-input-pvp-fight">
+                </div>
+                <div class="game-input-action-item">
+                    <button onclick="sendMessage()">Message</button>
+                    <input type="text" id="game-input-message-recipient">
+                    <input type="text" id="game-input-message">
+                </div>
+            </div>
+        </main>
+        <script src="/ui/js/helpers.js"></script>
+        <script src="/ui/js/api.js"></script>
+    </body>
+</html>

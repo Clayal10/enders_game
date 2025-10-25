@@ -1,0 +1,143 @@
+*{
+    padding: 0;
+    margin: 0;
+    color: #edeff0;
+}
+
+body{
+    background-color: #00316e;
+
+}
+main{
+    width: 100%;
+    height: 100vh;
+}
+
+#input-landing{
+    min-width: 400px;
+    width: 35%;
+    background-color: #001540;
+    margin: auto;
+    padding: 1em;
+    border-radius: 10px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+form{
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    grid-template-columns: auto auto;
+    gap: 20px;
+    grid-template-areas:
+        "main sidebar"
+        "main sidebar2"
+}
+
+form input{
+    color: #001540;
+}
+
+#input-hostname{
+    grid-area: sidebar;
+}
+
+#input-port{
+    grid-area: sidebar2;
+}
+
+button{
+    color: #001540;
+    font-size: 16px;
+    padding: 1em;
+    border-radius: 10px;
+    background-color: #edeff0;
+    transition-duration: 300ms;
+    border: none;
+}
+
+button:hover{
+    background-color: #bbdbeb;
+    box-shadow: 0 0 5px black;
+}
+
+#game-display{
+    min-width: 600px;
+    width: 90%;
+    margin: auto;
+    margin-top: 0;
+    background-color: #00316e;
+    border-radius: 10px;
+    padding: 1em;
+    height: 67%;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#game-info{
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    height: 95%;
+    justify-content: space-between;
+}
+
+#game-text{
+    display: inline-block;
+    width: 50%;
+    white-space: pre-wrap;
+    overflow: auto;
+}
+
+#game-players, #game-rooms{
+    display: inline-block;
+    width: 25%;
+    white-space: pre-wrap;
+    overflow:   auto;
+}
+
+#input-text{
+    color: #00316e;
+}
+
+#game-input{
+    width: 95%;
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 1em;
+}
+
+.hidden{
+    display: none;
+}
+
+#game-info pre{
+    border-radius: 10px;
+    margin: 2px;
+    background-color: #001540;
+    padding: 3px;
+}
+
+#game-input-main{
+    display: none;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 5px;
+}
+
+.game-input-action-item{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.game-input-action-item input{
+    color: #000b22;
+}

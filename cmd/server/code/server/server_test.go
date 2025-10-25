@@ -1,0 +1,427 @@
+package server
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"log"
+	"net"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/Clayal10/enders_game/pkg/assert"
+	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
+)
+
+// Global byte buffer for log checking.
+var buf bytes.Buffer
+
+func TestServerFunctionality(t *testing.T) {
+	a := assert.New(t)
+
+	log.SetOutput(&buf)
+
+	port := cross.GetFreePort()
+	cfg := &Config{
+		Port: port,
+	}
+
+	cfs, err := New(cfg)
+	a.NoError(err)
+	defer func() {
+		for _, cf := range cfs {
+			cf()
+		}
+	}()
+
+	t.Run("TestInvalidCharacterStats", func(_ *testing.T) {
+		char := &lurk.Character{
+			Type:       lurk.TypeCharacter,
+			Name:       "Invalid guy",
+			Attack:     1000,
+			Defense:    90,
+			Regen:      80,
+			RoomNum:    2,
+			PlayerDesc: "A guy who is just programming a game server",
+		}
+
+		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
+		a.NoError(err)
+
+		buffer, n, err := lurk.ReadSingleMessage(conn)
+		a.NoError(err)
+
+		msg, err := lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeVersion)
+
+		buffer, n, err = lurk.ReadSingleMessage(conn)
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeGame)
+
+		ba := lurk.Marshal(char)
+
+		_, err = conn.Write(ba) // send character
+		a.NoError(err)
+
+		buffer, _, err = lurk.ReadSingleMessage(conn) // read error
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer)
+		a.NoError(err)
+
+		e, ok := msg.(*lurk.Error)
+		a.True(ok)
+
+		a.True(strings.Contains(e.ErrMessage, "has invalid stats"))
+
+		sendLeave(conn, a)
+	})
+	t.Run("TestBasicGameplay", func(_ *testing.T) {
+		conn := startClientConnection(a, cfg, &lurk.Character{
+			Type:       lurk.TypeCharacter,
+			Name:       "Tester",
+			Attack:     3,
+			Defense:    0,
+			Regen:      0,
+			RoomNum:    1,
+			Flags:      map[string]bool{lurk.Alive: true},
+			PlayerDesc: "A guy who is just programming a game server",
+		})
+
+		conn2 := startClientConnection(a, cfg, &lurk.Character{
+			Type:       lurk.TypeCharacter,
+			Name:       "Tester 2",
+			Attack:     50,
+			Defense:    49,
+			Regen:      1,
+			RoomNum:    1,
+			Flags:      map[string]bool{lurk.Alive: true},
+			PlayerDesc: "A guy who is just programming a game server",
+		})
+
+		conn3 := startClientConnection(a, cfg, &lurk.Character{
+			Type:       lurk.TypeCharacter,
+			Name:       "fighter bot",
+			Attack:     1,
+			Defense:    0,
+			Regen:      0,
+			RoomNum:    1,
+			Flags:      map[string]bool{lurk.Alive: true, lurk.JoinBattle: true},
+			PlayerDesc: "A guy who is just programming a game server",
+		})
+
+		buffer, _, err := lurk.ReadSingleMessage(conn) // read the 'room'
+		a.NoError(err)
+
+		msg, err := lurk.Unmarshal(buffer)
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeRoom)
+
+		paths := []*lurk.Connection{}
+		characters := []*lurk.Character{}
+
+		for {
+			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			buffer, _, err = lurk.ReadSingleMessage(conn)
+			if err != nil {
+				break
+			}
+			msg, err := lurk.Unmarshal(buffer)
+			a.NoError(err)
+			switch msg.GetType() {
+			case lurk.TypeCharacter:
+				characters = append(characters, msg.(*lurk.Character))
+			case lurk.TypeConnection:
+				paths = append(paths, msg.(*lurk.Connection))
+			default:
+				continue
+			}
+		}
+		a.True(len(characters) != 0)
+		a.True(len(paths) != 0)
+
+		cr := &lurk.ChangeRoom{
+			Type:       lurk.TypeChangeRoom,
+			RoomNumber: battleSchoolBattleRoom,
+		}
+		ba := lurk.Marshal(cr)
+		_, err = conn.Write(ba)
+		a.NoError(err)
+
+		paths = paths[:0]
+		characters = characters[:0]
+		for {
+			_ = conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
+			buffer, _, err = lurk.ReadSingleMessage(conn)
+			if err != nil {
+				break
+			}
+			msg, err := lurk.Unmarshal(buffer)
+			a.NoError(err)
+			switch msg.GetType() {
+			case lurk.TypeCharacter:
+				// Could battle in the future
+				characters = append(characters, msg.(*lurk.Character))
+			case lurk.TypeConnection:
+				paths = append(paths, msg.(*lurk.Connection))
+			default:
+				continue
+			}
+		}
+
+		a.True(len(characters) != 0)
+		a.True(len(paths) != 0)
+
+		buffer, _, err = lurk.ReadSingleMessage(conn2)
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer)
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeRoom)
+
+		// conn2 writes a message to conn 1
+		_, err = conn2.Write(lurk.Marshal(&lurk.Message{
+			Recipient: "Tester",
+			Sender:    "Tester 2",
+			Text:      "Hello!",
+		}))
+		a.NoError(err)
+
+		m := readUntil(a, lurk.TypeMessage, conn)
+		message, ok := m.(*lurk.Message)
+		a.True(ok)
+		a.True(strings.Contains(message.Text, "Hello!"))
+
+		monsterHealTime = time.Millisecond
+		defer func() { monsterHealTime = 10 * time.Second }()
+		//Fight petra
+		_, err = conn.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+
+		a.Eventually(func() bool {
+			return strings.Contains(buf.String(), "died in a fight")
+		}, time.Second, 5*time.Millisecond)
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+
+		a.Eventually(func() bool {
+			lm := readUntil(a, lurk.TypeCharacter, conn3)
+			if lm == nil {
+				return false
+			}
+			ch := lm.(*lurk.Character)
+			return ch.Health < 100 && ch.Name == "fighter bot"
+		}, time.Second, time.Millisecond)
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Loot{TargetName: "fighter bot"}))
+		a.NoError(err)
+
+		errMessage := readUntil(a, lurk.TypeError, conn2)
+
+		a.True(errMessage != nil)
+		a.True(errMessage.GetType() == lurk.TypeError)
+		e, ok := errMessage.(*lurk.Error)
+		a.True(ok)
+		a.True(strings.Contains(e.ErrMessage, "Invalid loot conditions"))
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Fight{}))
+		a.NoError(err)
+
+		_, err = conn2.Write(lurk.Marshal(&lurk.Loot{TargetName: "fighter bot"}))
+		a.NoError(err)
+
+		sendLeave(conn, a)
+		/* Termination of conn*/
+
+		time.Sleep(50 * time.Millisecond)
+
+		a.True(strings.Contains(buf.String(), "left."))
+
+		// Send invalid stuff to server.
+		ba = lurk.Marshal(&lurk.Accept{
+			Type:   lurk.TypeAccept,
+			Action: lurk.TypeAccept,
+		})
+
+		_, err = conn2.Write(ba)
+		a.NoError(err)
+
+		errMessage = readUntil(a, lurk.TypeError, conn2)
+
+		a.True(errMessage != nil)
+		a.True(errMessage.GetType() == lurk.TypeError)
+		e, ok = errMessage.(*lurk.Error)
+		a.True(ok)
+		a.True(strings.Contains(e.ErrMessage, "Message contains invalid fields"))
+
+		sendLeave(conn2, a)
+	})
+
+	t.Run("TestInitialMessageErrors", func(_ *testing.T) {
+		char := &lurk.Character{
+			Type:       lurk.TypeCharacter,
+			Name:       "Tester",
+			Attack:     100,
+			Defense:    90,
+			Regen:      80,
+			RoomNum:    2,
+			PlayerDesc: "A guy who is just programming a game server",
+		}
+
+		conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
+		a.NoError(err)
+
+		buffer, n, err := lurk.ReadSingleMessage(conn)
+		a.NoError(err)
+
+		msg, err := lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeVersion)
+
+		buffer, n, err = lurk.ReadSingleMessage(conn)
+		a.NoError(err)
+
+		msg, err = lurk.Unmarshal(buffer[:n])
+		a.NoError(err)
+
+		a.True(msg.GetType() == lurk.TypeGame)
+
+		ba := lurk.Marshal(char)
+
+		ba[0] = 20
+
+		_, err = conn.Write(ba) // send character with bad type.
+		a.NoError(err)
+
+		errMessage := readUntil(a, lurk.TypeError, conn)
+		a.True(errMessage != nil)
+		a.True(errMessage.GetType() == lurk.TypeError)
+		e, ok := errMessage.(*lurk.Error)
+		a.True(ok)
+		a.True(strings.Contains(e.ErrMessage, "Bad message"))
+	})
+}
+
+func TestServerStartupErrors(t *testing.T) {
+	a := assert.New(t)
+
+	log.SetOutput(&buf)
+	t.Run("TestBadIPandPort", func(_ *testing.T) {
+		port := cross.GetFreePort()
+		cfg := &Config{
+			Port: port,
+		}
+
+		cfs, err := New(cfg)
+		a.NoError(err)
+
+		_, err = New(cfg)
+		a.Error(err)
+		a.True(strings.Contains(buf.String(), "Could not listen on port"))
+
+		for _, cf := range cfs {
+			cf()
+		}
+	})
+}
+
+func sendLeave(conn net.Conn, a *assert.Assert) {
+	leave := &lurk.Leave{
+		Type: lurk.TypeLeave,
+	}
+	ba := lurk.Marshal(leave)
+
+	_, err := conn.Write(ba)
+	a.NoError(err)
+}
+
+func readUntil(a *assert.Assert, t lurk.MessageType, conn net.Conn) lurk.LurkMessage {
+	_ = conn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+	for {
+		buffer, _, err := lurk.ReadSingleMessage(conn)
+		if err != nil {
+			if errors.Is(err, cross.ErrInvalidMessageType) {
+				continue
+			}
+			return nil
+		}
+
+		msg, err := lurk.Unmarshal(buffer)
+		a.NoError(err)
+
+		mt := msg.GetType()
+		if mt == t {
+			return msg
+		}
+	}
+}
+
+// This function sends the server a character and a start, then reads back the returned character
+// and accept messages for said character and start.
+func startClientConnection(a *assert.Assert, cfg *Config, char *lurk.Character) net.Conn {
+	conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
+	a.NoError(err)
+
+	buffer, n, err := lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	msg, err := lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeVersion)
+
+	buffer, n, err = lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeGame)
+
+	ba := lurk.Marshal(char)
+
+	_, err = conn.Write(ba) // send character
+	a.NoError(err)
+
+	buffer, n, err = lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeCharacter)
+
+	buffer, n, err = lurk.ReadSingleMessage(conn) // read accept
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeAccept)
+
+	ba = lurk.Marshal(&lurk.Start{
+		Type: lurk.TypeStart,
+	})
+
+	_, err = conn.Write(ba)
+	a.NoError(err)
+
+	buffer, _, err = lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	a.True(buffer[0] == byte(lurk.TypeAccept))
+
+	return conn
+}
