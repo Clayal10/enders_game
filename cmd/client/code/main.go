@@ -66,8 +66,8 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 const (
-	certFile = "~/certificate/isoptera.lcsc.edu/fullchain20.pem"
-	keyFile  = "~/certificate/isoptera.lcsc.edu/privkey20.pem"
+	certFile = "../../certificate/isoptera.lcsc.edu/fullchain20.pem"
+	keyFile  = "../../certificate/isoptera.lcsc.edu/privkey20.pem"
 )
 
 func serve() error {
@@ -79,6 +79,8 @@ func serve() error {
 	_, keyErr := os.Stat(keyFile)
 	if certErr != nil || keyErr != nil {
 		log.Println("Serving over HTTP")
+		log.Println(certErr)
+		log.Println(keyErr)
 		return http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", defaultPort), nil)
 	}
 	log.Println("Serving over HTTPS")
