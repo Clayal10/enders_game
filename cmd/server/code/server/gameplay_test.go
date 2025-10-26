@@ -168,8 +168,6 @@ func TestGameActions(t *testing.T) {
 			a.True(ok)
 			return msg.Narration && strings.Contains(msg.Text, "t2 left the server!")
 		}, time.Second*100, 20*time.Millisecond)
-		_, err = conn1.Write(lurk.Marshal(&lurk.Leave{}))
-		a.NoError(err)
 
 	})
 	t.Run("TestKillingHiveQueenCocoon", func(_ *testing.T) {
@@ -234,6 +232,8 @@ func TestGameActions(t *testing.T) {
 			a.True(ok)
 			return strings.Contains(msg.Text, "Xenocide")
 		}, time.Second, 20*time.Millisecond)
+		a.NoError(conn.Close())
+		time.Sleep(50 * time.Millisecond)
 	})
 	t.Run("TestUpgradingStats", func(_ *testing.T) {
 		port := cross.GetFreePort()

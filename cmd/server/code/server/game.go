@@ -38,6 +38,7 @@ type user struct {
 	allowedRoom map[uint16]bool
 	killedQueen bool
 	killedFleet bool
+	terminated  bool
 }
 
 type room struct {
