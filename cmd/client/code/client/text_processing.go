@@ -17,16 +17,15 @@ type ClientState struct {
 	Players     string `json:"players"`
 	Id          int64  `json:"id"`
 
-	characters       []*lurk.Character // key is name
-	uniqueCharacters map[string]int
+	characters map[string]*lurk.Character // key is name
 
 	room *lurk.Room
 }
 
 func newClientState(id int64) *ClientState {
 	return &ClientState{
-		Id:               id,
-		uniqueCharacters: map[string]int{},
+		Id:         id,
+		characters: map[string]*lurk.Character{},
 	}
 }
 
@@ -48,8 +47,7 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			c.State.Info += fmt.Sprintf("LURK Version %v.%v | %v Bytes of Extensions\n", version.Major, version.Minor, extensionBytes)
 		case lurk.TypeCharacter:
 			character := msg.(*lurk.Character)
-			c.State.characters = append(c.State.characters, character)
-			c.State.uniqueCharacters[character.Name] = len(c.State.characters) - 1
+			c.State.characters[character.Name] = character
 			if character.Name == c.character.Name {
 				c.character = character
 			}
@@ -57,7 +55,8 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 		case lurk.TypeRoom:
 			room := msg.(*lurk.Room)
 			c.State.room = room
-			c.State.stringifyRoom()
+			c.State.resetState()
+			c.State.Rooms += fmt.Sprintf(roomTemplate, c.State.room.RoomNumber, c.State.room.RoomName, c.State.room.RoomDesc)
 		case lurk.TypeConnection:
 			connection := msg.(*lurk.Connection)
 
@@ -82,13 +81,12 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 }
 
 func (c *Client) stringifyCharacters() {
+	c.State.Players = ""
 	c.State.Players = fmt.Sprintf(userTemplate, c.character.Name, c.character.Attack, c.character.Defense, c.character.Regen, c.character.Health, c.character.Gold)
-	namesInList := map[string]bool{}
-	for i, character := range c.State.characters {
-		if character.RoomNum != c.character.RoomNum || namesInList[character.Name] || c.State.uniqueCharacters[character.Name] != i || character.Name == c.character.Name {
+	for _, character := range c.State.characters {
+		if character.RoomNum != c.character.RoomNum || character.Name == c.character.Name {
 			continue
 		}
-		namesInList[character.Name] = true
 
 		switch {
 		case !character.Flags[lurk.Alive]:
@@ -101,10 +99,11 @@ func (c *Client) stringifyCharacters() {
 	}
 }
 
-func (state *ClientState) stringifyRoom() {
+func (state *ClientState) resetState() {
 	state.Rooms = ""
 	state.Connections = ""
-	state.Rooms += fmt.Sprintf(roomTemplate, state.room.RoomNumber, state.room.RoomName, state.room.RoomDesc)
+	state.Players = ""
+	state.characters = map[string]*lurk.Character{}
 }
 
 const characterTemplate = `
