@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 
 	"github.com/Clayal10/enders_game/pkg/cross"
 )
@@ -16,8 +15,6 @@ type receiver struct {
 	shouldRun bool
 	*game
 }
-
-var terminationTimeout = 2 * time.Second
 
 func newReceiver(cfg *Config, game *game) (*receiver, error) {
 	address := fmt.Sprintf("0.0.0.0:%v", cfg.Port)
@@ -74,9 +71,7 @@ func (rec *receiver) registerUser(conn net.Conn) {
 		log.Printf("%v: error during gameplay", err.Error())
 		return
 	}
-	rec.cleanup(player)
 	log.Printf("%v left.", player)
-	time.Sleep(terminationTimeout)
 }
 
 func (rec *receiver) stop() {
@@ -88,5 +83,20 @@ func (rec *receiver) stop() {
 func (rec *receiver) cleanup(player string) {
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
+	user, ok := rec.users[player]
+	if !ok || user.terminated {
+		return
+	}
+	oldRoom := user.c.RoomNum
+	user.c.RoomNum = 0
+	for _, u := range rec.users {
+		if u.c.RoomNum != oldRoom || u.c.Name == user.c.Name {
+			continue
+		}
+		if err := rec.sendCharacterUpdate(user.c, u.conn, u.c.Name, fmt.Sprintf("%s left the server!", player)); err != nil {
+			log.Printf("%v: error when updating others of leaving the server", err.Error())
+		}
+	}
+
 	delete(rec.users, player)
 }

@@ -740,6 +740,7 @@ func (g *game) handleLeave(player string) {
 	if !ok {
 		return
 	}
+	user.terminated = true
 
 	oldRoom := user.c.RoomNum
 	user.c.RoomNum = 0
