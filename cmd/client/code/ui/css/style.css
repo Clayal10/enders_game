@@ -89,7 +89,8 @@ button:hover{
 
 #game-text{
     display: inline-block;
-    width: 50%;
+    width: 100%;
+    height: 40%;
     white-space: pre-wrap;
     overflow: auto;
 }
@@ -106,12 +107,17 @@ button:hover{
 }
 
 #game-input{
-    width: 95%;
+    width: 60%;
+    min-width: 400px;
     margin: auto;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     justify-content: center;
     gap: 1em;
+}
+
+#game-input input{
+    color: #00316e;
 }
 
 .hidden{

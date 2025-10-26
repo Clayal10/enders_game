@@ -20,22 +20,27 @@
             <div id="game-display">
                 <div id="game-info">
                     <pre id="game-players"></pre>
-                    <pre id="game-text"></pre>
+                    <div id="game-input" class="hidden">
+                        <pre id="game-text"></pre> <!--Can make hidden-->
+                        <label class="hidden" id="input-label-name">Name:</label>
+                        <input class="hidden" type="text" id="input-text-name">
+                        <label class="hidden" id="input-label-attack">Attack:</label>
+                        <input class="hidden" type="text" id="input-text-attack"> 
+                        <label class="hidden" id="input-label-defense">Defense:</label>
+                        <input class="hidden" type="text" id="input-text-defense"> 
+                        <label class="hidden" id="input-label-regen">Regen:</label>
+                        <input class="hidden" type="text" id="input-text-regen">
+                        <label class="hidden" id="input-label-join">Automatically Join Battles?</label>
+                        <input class="hidden" type="checkbox" id="input-text-join" value="yes">  
+                        <label class="hidden" id="input-label-description">Description:</label>
+                        <input class="hidden" type="text" id="input-text-description">
+                        <button class="hidden"onclick="sendStart()">Start</button>
+                    </div>
                     <pre id="game-rooms"></pre>
                 </div>
+                
             </div>
-            <div id="game-input" class="hidden">
-                <label id="input-label"class="hidden"></label>
-                <input type="text" id="input-text" class="hidden">
-                <!--Character Input buttons-->
-                <button id="input-button" onclick="sendStart()" class="hidden">Start</button>
-                <button id="input-button-name" onclick="addName()" class="hidden">Next</button>
-                <button id="input-button-attack" onclick="addAttack()" class="hidden">Next</button>
-                <button id="input-button-defense" onclick="addDefense()" class="hidden">Next</button>
-                <button id="input-button-regen" onclick="addRegen()" class="hidden">Next</button>
-                <button id="input-button-description" onclick="addDescription()" class="hidden">Next</button>
-                <!--Move room buttons-->
-            </div>
+            
             <div id="game-input-main">
                 <div class="game-input-action-item">
                     <button onclick="sendChangeRoom()">Change Room</button>
