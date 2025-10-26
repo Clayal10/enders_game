@@ -110,6 +110,7 @@ type jsonCharacter struct {
 	Attack      string `json:"attack"`
 	Defense     string `json:"defense"`
 	Regen       string `json:"regen"`
+	JoinBattles string `json:"join"`
 	Description string `json:"description"`
 }
 
@@ -148,6 +149,7 @@ func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error)
 	if err != nil {
 		return nil, err
 	}
+
 	return &lurk.Character{
 		Name:       jsonChar.Name,
 		Attack:     uint16(attack),
@@ -155,7 +157,8 @@ func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error)
 		Regen:      uint16(regen),
 		PlayerDesc: jsonChar.Description,
 		Flags: map[string]bool{
-			lurk.Ready: true,
+			lurk.Ready:      true,
+			lurk.JoinBattle: jsonChar.JoinBattles == "yes",
 		},
 	}, nil
 }

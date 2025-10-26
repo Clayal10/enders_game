@@ -14,6 +14,18 @@ function setupDisplay() {
     hide("submit-button");
     reveal("terminate-button");
     reveal("game-input")
+    reveal("input-label-name")
+    reveal("input-text-name")
+    reveal("input-label-attack")
+    reveal("input-text-attack")
+    reveal("input-label-defense")
+    reveal("input-text-defense")
+    reveal("input-label-regen")
+    reveal("input-text-regen")
+    reveal("input-label-join")
+    reveal("input-text-join")
+    reveal("input-label-description")
+    reveal("input-text-description")
 }
 
 const errorCharacter = '<span style="color: red;">Error</span>: Invalid character settings, try again.'
@@ -49,7 +61,20 @@ function cleanup() {
     hide("terminate-button");
     hideGameInput()
     hide("game-input");
-    reveal("submit-button");
+    hide("submit-button");
+    hide("input-label-name")
+    hide("input-text-name")
+    hide("input-label-attack")
+    hide("input-text-attack")
+    hide("input-label-defense")
+    hide("input-text-defense")
+    hide("input-label-regen")
+    hide("input-text-regen")
+    hide("input-label-join")
+    hide("input-text-join")
+    hide("input-label-description")
+    hide("input-text-description")
+    reveal("submit-button")
     document.getElementById("game-text").innerHTML = "";
     document.getElementById("game-players").innerHTML = "";
     document.getElementById("game-rooms").innerHTML = "";
@@ -88,7 +113,7 @@ function getCharacterInput() {
     clearText("input-text-defense");
     userCharacter.regen = document.getElementById("input-text-regen").value;
     clearText("input-text-regen");
-    userCharacter.regen = document.getElementById("input-text-join").value;
+    userCharacter.join = document.getElementById("input-text-join").value;
     clearText("input-text-join");
     userCharacter.description = document.getElementById("input-text-description").value;
     clearText("input-text-description");

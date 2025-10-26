@@ -59,10 +59,10 @@ type gameAction struct {
 func createGameActions(id string) []gameAction {
 	id += "/"
 	startBA, _ := json.Marshal(&jsonCharacter{
-		"tester", "25", "25", "25", "test",
+		"tester", "25", "25", "25", "yes", "test",
 	})
 	startBadBA, _ := json.Marshal(&jsonCharacter{
-		"tester", "huh", "25", "25", "test",
+		"tester", "huh", "25", "25", "", "test",
 	})
 	return []gameAction{
 		{
