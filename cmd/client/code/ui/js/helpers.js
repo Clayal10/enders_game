@@ -26,6 +26,7 @@ function setupDisplay() {
     reveal("input-text-join")
     reveal("input-label-description")
     reveal("input-text-description")
+    reveal("input-submit-button")
 }
 
 const errorCharacter = '<span style="color: red;">Error</span>: Invalid character settings, try again.'
@@ -56,11 +57,26 @@ function clearText(id) {
     document.getElementById(id).value = "";
 }
 
+function hideConfig(){
+    hide("input-label-name")
+    hide("input-text-name")
+    hide("input-label-attack")
+    hide("input-text-attack")
+    hide("input-label-defense")
+    hide("input-text-defense")
+    hide("input-label-regen")
+    hide("input-text-regen")
+    hide("input-label-join")
+    hide("input-text-join")
+    hide("input-label-description")
+    hide("input-text-description")
+    hide("input-submit-button")
+}
+
 function cleanup() {
     shouldPoll = false;
     hide("terminate-button");
     hideGameInput()
-    hide("game-input");
     hide("submit-button");
     hide("input-label-name")
     hide("input-text-name")
@@ -74,6 +90,7 @@ function cleanup() {
     hide("input-text-join")
     hide("input-label-description")
     hide("input-text-description")
+    hide("input-submit-button")
     reveal("submit-button")
     document.getElementById("game-text").innerHTML = "";
     document.getElementById("game-players").innerHTML = "";
@@ -82,7 +99,6 @@ function cleanup() {
 
 var userCharacter = {};
 
-//This should be an overlay type with all elements shown at once.
 function addName() {
     userCharacter.name = document.getElementById("input-text").value;
     clearText("input-text");

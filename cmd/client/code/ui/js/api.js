@@ -74,6 +74,7 @@ function sendConfig(){
         setupDisplay(); // For character input.
     }catch(e){
         console.error("Could not send config: ", e);
+        cleanup();
     }
 }
 
@@ -109,15 +110,14 @@ function sendStart(){
                 throw new Error("Bad Response");
             }
             shouldPoll = true;
+            hide("input-submit-button");
+            hideConfig();
+            revealGameInput();
+            pollUpdateEP();
         })
-        hide("input-button");
-        hide("game-input");
-        revealGameInput();
     }catch(e){
         console.error("Could not send start: ", e);
         return
-    }finally{
-        pollUpdateEP();
     }
 }
 

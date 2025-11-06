@@ -108,12 +108,11 @@ button:hover{
     margin: auto;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: space-between;
     height: 100%;
     padding: 3px;
     width: 45%;
     margin-top: 1em;
-    gap: 1em;
 }
 
 #game-input input{
@@ -123,7 +122,14 @@ button:hover{
 #game-input div{
     display: flex;
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: space-between;
+}
+
+#input-submit-button{
+    width: 30%;
+    min-width: 200px;
+    max-width: 400px;
+    margin: auto;
 }
 
 .hidden{
