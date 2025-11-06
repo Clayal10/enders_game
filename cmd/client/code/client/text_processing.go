@@ -17,15 +17,19 @@ type ClientState struct {
 	Players     string `json:"players"`
 	Id          int64  `json:"id"`
 
-	characters map[string]*lurk.Character // key is name
+	characters  map[string]*lurk.Character // key is name
+	rooms       map[uint16]*lurk.Room
+	connections map[uint16]*lurk.Connection
 
-	room *lurk.Room
+	//room *lurk.Room
 }
 
 func newClientState(id int64) *ClientState {
 	return &ClientState{
-		Id:         id,
-		characters: map[string]*lurk.Character{},
+		Id:          id,
+		characters:  map[string]*lurk.Character{},
+		rooms:       map[uint16]*lurk.Room{},
+		connections: map[uint16]*lurk.Connection{},
 	}
 }
 
@@ -54,11 +58,12 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			c.stringifyCharacters()
 		case lurk.TypeRoom:
 			room := msg.(*lurk.Room)
-			c.State.room = room
-			c.State.resetState()
+			c.State.rooms[room.RoomNumber] = room
+
 			c.State.Rooms += fmt.Sprintf(roomTemplate, c.State.room.RoomNumber, c.State.room.RoomName, c.State.room.RoomDesc)
 		case lurk.TypeConnection:
 			connection := msg.(*lurk.Connection)
+			c.State.connections[connection.RoomNumber] = connection
 
 			newConnection := fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
 			if !strings.Contains(c.State.Connections, newConnection) {
@@ -78,6 +83,13 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			c.State.Info += fmt.Sprintf(errorTemplate, e.ErrCode, e.ErrMessage)
 		}
 	}
+}
+
+func (c *Client) stringifyRooms() {
+	room := c.State.rooms[c.character.RoomNum]
+	c.State.Rooms = fmt.Sprintf(roomTemplate, c.State.room.RoomNumber, c.State.room.RoomName, c.State.room.RoomDesc)
+	c.State.Connections = ""
+
 }
 
 func (c *Client) stringifyCharacters() {
