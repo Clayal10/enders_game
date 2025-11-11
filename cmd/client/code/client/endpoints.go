@@ -108,16 +108,13 @@ func (c *Client) registerChangeRoomEP() {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		if _, err = c.conn.Write(lurk.Marshal(&lurk.ChangeRoom{
 			RoomNumber: uint16(roomNum),
 		})); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		c.mu.Lock()
-		c.State.connections = nil
-		c.mu.Unlock()
 
 		w.WriteHeader(http.StatusOK)
 	})

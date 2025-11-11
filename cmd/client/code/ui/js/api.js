@@ -94,16 +94,25 @@ function sendTerminate(){
     }
 }
 
+function autoSendStart(){
+    const character = generateCharacter();
+    sendCharacter(character);
+}
+
 function sendStart(){
+    const character = getCharacterInput();
+    sendCharacter(character);
+}
+
+function sendCharacter(character){
     try{
-        const start = getCharacterInput();
         fetch(client.startAPI, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify(start)
+            body: JSON.stringify(character)
         }).then(response => {
             if(!response.ok){
                 handleCharacterError();

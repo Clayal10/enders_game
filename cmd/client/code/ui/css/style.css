@@ -125,7 +125,7 @@ button:hover{
     justify-content: space-between;
 }
 
-#input-submit-button{
+#input-submit-button, #input-submit-button-auto{
     width: 30%;
     min-width: 200px;
     max-width: 400px;

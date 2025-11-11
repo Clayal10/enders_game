@@ -27,6 +27,7 @@ function setupDisplay() {
     reveal("input-label-description")
     reveal("input-text-description")
     reveal("input-submit-button")
+    reveal("input-submit-button-auto")
 }
 
 const errorCharacter = '<span style="color: red;">Error</span>: Invalid character settings, try again.'
@@ -71,6 +72,7 @@ function hideConfig(){
     hide("input-label-description")
     hide("input-text-description")
     hide("input-submit-button")
+    hide("input-submit-button-auto")
 }
 
 function cleanup() {
@@ -91,6 +93,7 @@ function cleanup() {
     hide("input-label-description")
     hide("input-text-description")
     hide("input-submit-button")
+    hide("input-submit-button-auto")
     reveal("submit-button")
     document.getElementById("game-text").innerHTML = "";
     document.getElementById("game-players").innerHTML = "";
@@ -135,4 +138,11 @@ function getCharacterInput() {
     clearText("input-text-description");
     hide("game-input");
     return userCharacter;
+}
+
+function generateCharacter(){
+    userCharacter.name = document.getElementById("input-text-name").value;
+    clearText("input-text-name");
+    userCharacter.attack = "nil"
+    return userCharacter
 }
