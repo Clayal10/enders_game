@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Clayal10/enders_game/pkg/data"
@@ -26,7 +27,7 @@ type Client struct {
 	ctx context.Context
 	cf  context.CancelFunc
 
-	//mu   sync.Mutex
+	mu   sync.Mutex
 	conn net.Conn
 	q    *data.Queue[lurk.LurkMessage]
 }

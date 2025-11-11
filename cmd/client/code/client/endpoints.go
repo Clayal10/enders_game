@@ -114,6 +114,11 @@ func (c *Client) registerChangeRoomEP() {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		c.mu.Lock()
+		c.State.connections = nil
+		c.mu.Unlock()
+
 		w.WriteHeader(http.StatusOK)
 	})
 
