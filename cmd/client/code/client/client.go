@@ -55,10 +55,11 @@ func (c *Client) readFromServer() {
 		default:
 		}
 		if ba, _, err = lurk.ReadSingleMessage(c.conn); err != nil {
-			log.Printf("Error in reading message from server: %v", err.Error())
+			log.Printf("Error in reading message from server: %s", err.Error())
 			if errors.Is(err, cross.ErrInvalidMessageType) {
 				continue
 			}
+			log.Printf("%s: Disconnecting from the server", err.Error())
 			break
 		}
 
@@ -136,6 +137,10 @@ func (c *Client) makeDefaultCharacter(name string) *lurk.Character {
 }
 
 func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error) {
+	if c.Game == nil {
+		return nil, cross.ErrNotInitialized
+	}
+
 	if body == nil {
 		return c.makeDefaultCharacter(fmt.Sprintf("Character %d", c.id)), nil
 	}
