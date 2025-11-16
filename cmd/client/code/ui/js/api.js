@@ -74,6 +74,7 @@ function sendConfig(){
         setupDisplay(); // For character input.
     }catch(e){
         console.error("Could not send config: ", e);
+        cleanup();
     }
 }
 
@@ -93,31 +94,39 @@ function sendTerminate(){
     }
 }
 
+function autoSendStart(){
+    const character = generateCharacter();
+    sendCharacter(character);
+}
+
 function sendStart(){
+    const character = getCharacterInput();
+    sendCharacter(character);
+}
+
+function sendCharacter(character){
     try{
-        const start = getCharacterInput();
         fetch(client.startAPI, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify(start)
+            body: JSON.stringify(character)
         }).then(response => {
             if(!response.ok){
                 handleCharacterError();
                 throw new Error("Bad Response");
             }
             shouldPoll = true;
+            hide("input-submit-button");
+            hideConfig();
+            revealGameInput();
+            pollUpdateEP();
         })
-        hide("input-button");
-        hide("game-input");
-        revealGameInput();
     }catch(e){
         console.error("Could not send start: ", e);
         return
-    }finally{
-        pollUpdateEP();
     }
 }
 

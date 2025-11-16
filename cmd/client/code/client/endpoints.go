@@ -91,7 +91,6 @@ type jsonChangeRoom struct {
 
 func (c *Client) registerChangeRoomEP() {
 	http.HandleFunc(fmt.Sprintf("%s%d/", changeRoomEP, c.id), func(w http.ResponseWriter, r *http.Request) {
-
 		ba, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -108,12 +107,14 @@ func (c *Client) registerChangeRoomEP() {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		if _, err = c.conn.Write(lurk.Marshal(&lurk.ChangeRoom{
 			RoomNumber: uint16(roomNum),
 		})); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -220,6 +221,7 @@ func (c *Client) registerMessageEP() {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 	})
 }

@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Clayal10/enders_game/pkg/lurk"
 )
@@ -17,22 +16,21 @@ type ClientState struct {
 	Players     string `json:"players"`
 	Id          int64  `json:"id"`
 
-	characters       []*lurk.Character // key is name
-	uniqueCharacters map[string]int
-
-	room *lurk.Room
+	characters map[string]*lurk.Character `json:"-"`
 }
 
 func newClientState(id int64) *ClientState {
 	return &ClientState{
-		Id:               id,
-		uniqueCharacters: map[string]int{},
+		Id:         id,
+		characters: map[string]*lurk.Character{},
 	}
 }
 
 // updateClientState will take a slice of LurkMessage interface objects and modifies the ClientUpdate field with
 // the proper text fields.
 func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	for _, msg := range lurkMessages {
 		switch msg.GetType() {
 		case lurk.TypeGame:
@@ -48,23 +46,23 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			c.State.Info += fmt.Sprintf("LURK Version %v.%v | %v Bytes of Extensions\n", version.Major, version.Minor, extensionBytes)
 		case lurk.TypeCharacter:
 			character := msg.(*lurk.Character)
-			c.State.characters = append(c.State.characters, character)
-			c.State.uniqueCharacters[character.Name] = len(c.State.characters) - 1
+			if _, ok := c.State.characters[character.Name]; !ok && character.Name != c.character.Name && character.RoomNum == c.character.RoomNum {
+				c.State.Info += lineBreak
+				c.State.Info += fmt.Sprintf(newPlayer, character.Name, character.PlayerDesc)
+			}
+
+			c.State.characters[character.Name] = character
 			if character.Name == c.character.Name {
 				c.character = character
 			}
 			c.stringifyCharacters()
 		case lurk.TypeRoom:
 			room := msg.(*lurk.Room)
-			c.State.room = room
-			c.State.stringifyRoom()
+			c.State.Connections = ""
+			c.State.Rooms = fmt.Sprintf(roomTemplate, room.RoomNumber, room.RoomName, room.RoomDesc)
 		case lurk.TypeConnection:
 			connection := msg.(*lurk.Connection)
-
-			newConnection := fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
-			if !strings.Contains(c.State.Connections, newConnection) {
-				c.State.Connections += newConnection
-			}
+			c.State.Connections += fmt.Sprintf(connectionTemplate, connection.RoomNumber, connection.RoomName, connection.RoomDesc)
 		case lurk.TypeMessage:
 			message := msg.(*lurk.Message)
 			c.State.Info += lineBreak
@@ -77,34 +75,33 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			e := msg.(*lurk.Error)
 			c.State.Info += lineBreak
 			c.State.Info += fmt.Sprintf(errorTemplate, e.ErrCode, e.ErrMessage)
+		case lurk.TypeAccept:
+			accept := msg.(*lurk.Accept)
+			if accept.Action != lurk.TypeMessage {
+				continue
+			}
+			c.State.Info += lineBreak
+			c.State.Info += sentMessageTemplate
 		}
 	}
 }
 
 func (c *Client) stringifyCharacters() {
+	c.State.Players = ""
 	c.State.Players = fmt.Sprintf(userTemplate, c.character.Name, c.character.Attack, c.character.Defense, c.character.Regen, c.character.Health, c.character.Gold)
-	namesInList := map[string]bool{}
-	for i, character := range c.State.characters {
-		if character.RoomNum != c.character.RoomNum || namesInList[character.Name] || c.State.uniqueCharacters[character.Name] != i || character.Name == c.character.Name {
+	for _, character := range c.State.characters {
+		if character.RoomNum != c.character.RoomNum || character.Name == c.character.Name {
 			continue
 		}
-		namesInList[character.Name] = true
-
 		switch {
 		case !character.Flags[lurk.Alive]:
-			c.State.Players += fmt.Sprintf(deadEntity, character.Name)
+			c.State.Players += fmt.Sprintf(deadEntity, character.Name, character.Attack, character.Defense, character.Regen, character.Gold)
 		case character.Flags[lurk.Monster]:
 			c.State.Players += fmt.Sprintf(monsterTemplate, character.Name, character.Attack, character.Defense, character.Regen, character.Health)
 		default:
 			c.State.Players += fmt.Sprintf(characterTemplate, character.Name, character.Attack, character.Defense, character.Regen, character.Health, character.Gold)
 		}
 	}
-}
-
-func (state *ClientState) stringifyRoom() {
-	state.Rooms = ""
-	state.Connections = ""
-	state.Rooms += fmt.Sprintf(roomTemplate, state.room.RoomNumber, state.room.RoomName, state.room.RoomDesc)
 }
 
 const characterTemplate = `
@@ -124,6 +121,7 @@ const monsterTemplate = `
   | Health: %v
   `
 
+// Think about showing their descriptions somehow. Maybe a button that will list everything.
 const userTemplate = `
 <span style="color: green;">%s</span>
   | Attack: %v
@@ -135,6 +133,10 @@ const userTemplate = `
 
 const deadEntity = `
 <span style="background-color: red; color: white;">%s</span>
+  | Attack: %v
+  | Defense: %v
+  | Regen: %v
+  | Gold: %v
 `
 
 const errorTemplate = `
@@ -152,11 +154,21 @@ const connectionTemplate = `
 `
 
 const messageTemplate = `
-%s => %s: %s`
+%s => %s: %s
+`
+
+const sentMessageTemplate = `
+Successfully sent message.
+`
 
 const narratorTemplate = `
 <span style="color: purple;">%s</span> => %s: %s`
 
 const lineBreak = `
 ==================================================
+`
+
+const newPlayer = `
+%s: 
+-> %s
 `

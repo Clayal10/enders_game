@@ -10,8 +10,10 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/Clayal10/enders_game/pkg/cross"
 	"github.com/Clayal10/enders_game/pkg/data"
 	"github.com/Clayal10/enders_game/pkg/lurk"
 )
@@ -26,7 +28,7 @@ type Client struct {
 	ctx context.Context
 	cf  context.CancelFunc
 
-	//mu   sync.Mutex
+	mu   sync.Mutex
 	conn net.Conn
 	q    *data.Queue[lurk.LurkMessage]
 }
@@ -53,11 +55,17 @@ func (c *Client) readFromServer() {
 		default:
 		}
 		if ba, _, err = lurk.ReadSingleMessage(c.conn); err != nil {
+			log.Printf("Error in reading message from server: %s", err.Error())
+			if errors.Is(err, cross.ErrInvalidMessageType) {
+				continue
+			}
+			log.Printf("%s: Disconnecting from the server", err.Error())
 			break
 		}
 
 		if lurkMessage, err = lurk.Unmarshal(ba); err != nil {
-			break
+			log.Printf("Error in decoding message from server: %v", err.Error())
+			continue
 		}
 		c.q.Enqueue(lurkMessage)
 	}
@@ -110,19 +118,31 @@ type jsonCharacter struct {
 	Attack      string `json:"attack"`
 	Defense     string `json:"defense"`
 	Regen       string `json:"regen"`
+	JoinBattles string `json:"join"`
 	Description string `json:"description"`
 }
 
+func (c *Client) makeDefaultCharacter(name string) *lurk.Character {
+	return &lurk.Character{
+		Type:    lurk.TypeCharacter,
+		Name:    name,
+		Attack:  c.Game.InitialPoints / 3,
+		Defense: c.Game.InitialPoints / 3,
+		Regen:   c.Game.InitialPoints / 3,
+		Flags: map[string]bool{
+			lurk.Ready: true,
+		},
+		PlayerDesc: "Generated player!",
+	}
+}
+
 func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error) {
+	if c.Game == nil {
+		return nil, cross.ErrNotInitialized
+	}
+
 	if body == nil {
-		return &lurk.Character{
-			Type: lurk.TypeCharacter,
-			Name: fmt.Sprintf("Character %d", c.id),
-			Flags: map[string]bool{
-				lurk.Ready: true,
-			},
-			PlayerDesc: "Character",
-		}, nil
+		return c.makeDefaultCharacter(fmt.Sprintf("Character %d", c.id)), nil
 	}
 
 	ba, err := io.ReadAll(body)
@@ -134,6 +154,10 @@ func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error)
 	if err = json.Unmarshal(ba, jsonChar); err != nil {
 		log.Printf("%v: could not unmarshal into a LURK character", err)
 		return nil, err
+	}
+
+	if jsonChar.Attack == "nil" && jsonChar.Name != "" {
+		return c.makeDefaultCharacter(jsonChar.Name), nil
 	}
 
 	attack, err := strconv.ParseUint(jsonChar.Attack, 10, 16)
@@ -148,6 +172,7 @@ func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error)
 	if err != nil {
 		return nil, err
 	}
+
 	return &lurk.Character{
 		Name:       jsonChar.Name,
 		Attack:     uint16(attack),
@@ -155,7 +180,8 @@ func (c *Client) getOrMakeCharacter(body io.ReadCloser) (*lurk.Character, error)
 		Regen:      uint16(regen),
 		PlayerDesc: jsonChar.Description,
 		Flags: map[string]bool{
-			lurk.Ready: true,
+			lurk.Ready:      true,
+			lurk.JoinBattle: jsonChar.JoinBattles == "yes",
 		},
 	}, nil
 }

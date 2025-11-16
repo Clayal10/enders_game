@@ -71,7 +71,6 @@ button:hover{
     margin-top: 0;
     background-color: #00316e;
     border-radius: 10px;
-    padding: 1em;
     height: 67%;
 
     display: flex;
@@ -89,7 +88,7 @@ button:hover{
 
 #game-text{
     display: inline-block;
-    width: 50%;
+    width: 100%;
     white-space: pre-wrap;
     overflow: auto;
 }
@@ -106,12 +105,31 @@ button:hover{
 }
 
 #game-input{
-    width: 95%;
     margin: auto;
     display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    padding: 3px;
+    width: 45%;
+    margin-top: 1em;
+}
+
+#game-input input{
+    color: #00316e;
+}
+
+#game-input div{
+    display: flex;
     flex-direction: row;
-    justify-content: center;
-    gap: 1em;
+    justify-content: space-between;
+}
+
+#input-submit-button, #input-submit-button-auto{
+    width: 30%;
+    min-width: 200px;
+    max-width: 400px;
+    margin: auto;
 }
 
 .hidden{
@@ -120,9 +138,9 @@ button:hover{
 
 #game-info pre{
     border-radius: 10px;
-    margin: 2px;
     background-color: #001540;
     padding: 3px;
+    height: 100%;
 }
 
 #game-input-main{

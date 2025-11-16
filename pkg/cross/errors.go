@@ -13,6 +13,7 @@ var (
 	ErrInvalidRoomNumber  = errors.New("room number does not exist")
 	ErrRoomsNotConnected  = errors.New("rooms are not connected")
 	ErrQueueEmpty         = errors.New("queue empty")
+	ErrNotInitialized     = errors.New("not initialized")
 )
 
 type ErrCode byte
