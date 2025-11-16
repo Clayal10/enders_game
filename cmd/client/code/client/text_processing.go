@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/Clayal10/enders_game/pkg/lurk"
 )
@@ -52,8 +51,6 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 				c.State.Info += fmt.Sprintf(newPlayer, character.Name, character.PlayerDesc)
 			}
 
-			log.Printf("Name: %v\n", character.Name)
-
 			c.State.characters[character.Name] = character
 			if character.Name == c.character.Name {
 				c.character = character
@@ -78,6 +75,13 @@ func (c *Client) updateClientState(lurkMessages []lurk.LurkMessage) {
 			e := msg.(*lurk.Error)
 			c.State.Info += lineBreak
 			c.State.Info += fmt.Sprintf(errorTemplate, e.ErrCode, e.ErrMessage)
+		case lurk.TypeAccept:
+			accept := msg.(*lurk.Accept)
+			if accept.Action != lurk.TypeMessage {
+				continue
+			}
+			c.State.Info += lineBreak
+			c.State.Info += sentMessageTemplate
 		}
 	}
 }
@@ -150,7 +154,12 @@ const connectionTemplate = `
 `
 
 const messageTemplate = `
-%s => %s: %s`
+%s => %s: %s
+`
+
+const sentMessageTemplate = `
+Successfully sent message.
+`
 
 const narratorTemplate = `
 <span style="color: purple;">%s</span> => %s: %s`

@@ -103,7 +103,6 @@ func TestStartingServer(t *testing.T) {
 			defer cross.LogOnErr(resp.Body.Close)
 			return strings.Contains(client.State.Info, "HELLO")
 		}, time.Second*2, time.Millisecond*100)
-
 	})
 	t.Run("TestBadDial", func(_ *testing.T) {
 		clientConfig := &Config{

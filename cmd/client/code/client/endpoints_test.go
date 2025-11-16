@@ -11,14 +11,16 @@ import (
 	"github.com/Clayal10/enders_game/cmd/server/code/server"
 	"github.com/Clayal10/enders_game/pkg/assert"
 	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 func TestHittingEndpoints(t *testing.T) {
 	a := assert.New(t)
 	serverPort := cross.GetFreePort()
-	cfs, err := server.New(&server.Config{
+	serverConfig := &server.Config{
 		Port: serverPort,
-	})
+	}
+	cfs, err := server.New(serverConfig)
 	a.NoError(err)
 	pollTime = time.Millisecond
 	defer func() {
@@ -37,6 +39,14 @@ func TestHittingEndpoints(t *testing.T) {
 	})
 	a.NoError(err)
 	client.Start()
+
+	_ = startClientConnection(a, serverConfig, &lurk.Character{
+		Name:       "Message Guy",
+		Attack:     10,
+		Defense:    20,
+		Regen:      30,
+		PlayerDesc: "A bot who is going to receive a message",
+	})
 
 	tests := createGameActions(fmt.Sprint(client.id))
 	for _, test := range tests {
@@ -136,7 +146,7 @@ func createGameActions(id string) []gameAction {
 			messageEP + id,
 			http.StatusOK,
 			[]byte(`{
-				"recipient": "test",
+				"recipient": "Message Guy",
 				"text": "Test!"
 			}`),
 		},
