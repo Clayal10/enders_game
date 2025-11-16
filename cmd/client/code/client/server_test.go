@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"github.com/Clayal10/enders_game/cmd/server/code/server"
 	"github.com/Clayal10/enders_game/pkg/assert"
 	"github.com/Clayal10/enders_game/pkg/cross"
+	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
 func TestStartingServer(t *testing.T) {
@@ -44,7 +44,7 @@ func TestStartingServer(t *testing.T) {
 		filename := filepath.Join(os.TempDir(), "test.txt")
 		fd, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, os.ModePerm)
 		a.NoError(err)
-		defer fd.Close()
+		defer cross.LogOnErr(fd.Close)
 
 		n, err := fd.Write([]byte(`{
 			"name": "Tester!",
@@ -70,20 +70,40 @@ func TestStartingServer(t *testing.T) {
 		uri := fmt.Sprintf("http://localhost:%d", clientPort) + "%v" + fmt.Sprintf("%d/", client.id)
 		resp, err := http.Post(fmt.Sprintf(uri, startEP), "application/json", file)
 		a.NoError(err)
-		defer resp.Body.Close()
+		defer cross.LogOnErr(resp.Body.Close)
 		a.True(resp.StatusCode == http.StatusOK)
 
-		resp, err = http.Post(fmt.Sprintf(uri, messageEP), "application/json", bytes.NewReader())
-		a.NoError(err)
-		defer resp.Body.Close()
-		a.True(resp.StatusCode == http.StatusOK)
 		a.Eventually(func() bool {
 			resp, err := http.Get(fmt.Sprintf(uri, updateEP))
 			a.NoError(err)
 			a.True(resp.StatusCode == http.StatusOK)
-			defer resp.Body.Close()
+			defer cross.LogOnErr(resp.Body.Close)
 			return strings.Contains(client.State.Players, "Colonel Graph")
 		}, time.Second*2, time.Millisecond*100)
+
+		bot := startClientConnection(a, serverConfig, &lurk.Character{
+			Name:       "bot",
+			Attack:     10,
+			Defense:    20,
+			Regen:      30,
+			PlayerDesc: "A bot who is going to send a message",
+		})
+
+		_, err = bot.Write(lurk.Marshal(&lurk.Message{
+			Recipient: client.character.Name,
+			Sender:    "bot",
+			Text:      "HELLO",
+		}))
+		a.NoError(err)
+
+		a.Eventually(func() bool {
+			resp, err := http.Get(fmt.Sprintf(uri, updateEP))
+			a.NoError(err)
+			a.True(resp.StatusCode == http.StatusOK)
+			defer cross.LogOnErr(resp.Body.Close)
+			return strings.Contains(client.State.Info, "HELLO")
+		}, time.Second*2, time.Millisecond*100)
+
 	})
 	t.Run("TestBadDial", func(_ *testing.T) {
 		clientConfig := &Config{
@@ -109,4 +129,60 @@ func TestStartingServer(t *testing.T) {
 		_, err = New(clientConfig)
 		a.Error(err)
 	})
+}
+
+func startClientConnection(a *assert.Assert, cfg *server.Config, char *lurk.Character) net.Conn {
+	conn, err := net.Dial("tcp", fmt.Sprintf(":%v", cfg.Port))
+	a.NoError(err)
+
+	buffer, n, err := lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	msg, err := lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeVersion)
+
+	buffer, n, err = lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeGame)
+
+	ba := lurk.Marshal(char)
+
+	_, err = conn.Write(ba) // send character
+	a.NoError(err)
+
+	buffer, n, err = lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeCharacter)
+
+	buffer, n, err = lurk.ReadSingleMessage(conn) // read accept
+	a.NoError(err)
+
+	msg, err = lurk.Unmarshal(buffer[:n])
+	a.NoError(err)
+
+	a.True(msg.GetType() == lurk.TypeAccept)
+
+	ba = lurk.Marshal(&lurk.Start{
+		Type: lurk.TypeStart,
+	})
+
+	_, err = conn.Write(ba)
+	a.NoError(err)
+
+	buffer, _, err = lurk.ReadSingleMessage(conn)
+	a.NoError(err)
+
+	a.True(buffer[0] == byte(lurk.TypeAccept))
+
+	return conn
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Clayal10/enders_game/pkg/assert"
+	"github.com/Clayal10/enders_game/pkg/cross"
 	"github.com/Clayal10/enders_game/pkg/lurk"
 )
 
@@ -52,7 +53,7 @@ func TestDefaultCharacter(t *testing.T) {
 		filename := filepath.Join(os.TempDir(), "test.txt")
 		fd, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, os.ModePerm)
 		a.NoError(err)
-		defer fd.Close()
+		defer cross.LogOnErr(fd.Close)
 
 		n, err := fd.Write([]byte(`{
 			"name": "Tester!",
