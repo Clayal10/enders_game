@@ -2,12 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/Clayal10/enders_game/cmd/client/code/client"
 )
@@ -63,37 +60,4 @@ func handleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c.Start()
-}
-
-const (
-	certFile = "../../certificate/isoptera.lcsc.edu/fullchain20.pem"
-	keyFile  = "../../certificate/isoptera.lcsc.edu/privkey20.pem"
-)
-
-func serve() error {
-	http.HandleFunc("/", mainPageHandler)
-	fs := http.FileServer(http.Dir(staticDir))
-	http.Handle("/ui/", http.StripPrefix("/ui/", fs))
-
-	_, certErr := os.Stat(certFile)
-	_, keyErr := os.Stat(keyFile)
-	if certErr != nil || keyErr != nil {
-		log.Println("Serving over HTTP")
-		return http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", defaultPort), nil)
-	}
-	log.Println("Serving over HTTPS")
-	return http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%v", defaultPort), certFile, keyFile, nil)
-}
-
-func mainPageHandler(w http.ResponseWriter, req *http.Request) {
-	template, err := template.ParseFiles(fmt.Sprintf("%v/html/home.html", staticDir))
-	if err != nil {
-		log.Printf("%v: could not parse HTML file", err)
-		return
-	}
-
-	if err = template.Execute(w, nil); err != nil {
-		log.Printf("%v: could not execute HTML file", err)
-		return
-	}
 }
