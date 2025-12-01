@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/Clayal10/enders_game/pkg/cross"
 )
 
 // Config uses a string value for port since it is being received as a JSON object.
@@ -21,6 +23,9 @@ func New(cfg *Config) (*Client, error) {
 	lurkMessages, err := readAllMessagesInBuffer(conn)
 	if err != nil {
 		return nil, err
+	}
+	if len(lurkMessages) == 0 {
+		return nil, cross.ErrNotInitialized
 	}
 
 	id := time.Now().UnixMicro()
