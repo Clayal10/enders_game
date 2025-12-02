@@ -1,7 +1,7 @@
 # Ender's Game
 
 <div style="display: flex; flex-direction: row;">
-<img src="./space_gopher.png" width="90" height="120"/>
+<img src="./space_gopher.png" width="70" height="100"/>
 <pre>
  ____  __ _  ____  ____  ____  _ ____     ___   __   _  _  ____ 
 (  __)(  ( \(    \(  __)(  _ \(// ___)   / __) / _\ ( \/ )(  __)
