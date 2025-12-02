@@ -7,6 +7,8 @@
 (____)\_)__)(____/(____)(__\_)  (____/   \___/\_/\_/\_)(_/(____)
 ```
 
+<img src="./space_gopher.png" width="200" height="300"/>
+
 ## Play Now!
 
 Use this [LURK client](https://isoptera.lcsc.edu:5068) and connect to port **5069** with the default hostname to play in your browser.
