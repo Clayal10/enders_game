@@ -30,3 +30,29 @@ const (
 	NoPVP               ErrCode = 8
 	NoError             ErrCode = 255
 )
+
+var (
+	ErrOther               = errors.New("other")
+	ErrBadRoom             = errors.New("bad room")
+	ErrPlayerAlreadyExists = errors.New("player already exists")
+	ErrBadMonster          = errors.New("bad monster")
+	ErrStatError           = errors.New("stat error")
+	ErrNotReady            = errors.New("not ready")
+	ErrNoTarget            = errors.New("no target")
+	ErrNoFight             = errors.New("no fight")
+	ErrNoPVP               = errors.New("no pvp")
+	ErrNoError             = errors.New("no error")
+)
+
+var ErrorCodeErrors = map[ErrCode]error{
+	Other:               ErrOther,
+	BadRoom:             ErrBadRoom,
+	PlayerAlreadyExists: ErrPlayerAlreadyExists,
+	BadMonster:          ErrBadMonster,
+	StatError:           ErrStatError,
+	NotReady:            ErrNotReady,
+	NoTarget:            ErrNoTarget,
+	NoFight:             ErrNoFight,
+	NoPVP:               ErrNoPVP,
+	NoError:             ErrNoError,
+}
