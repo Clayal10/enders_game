@@ -136,7 +136,10 @@ func (g *game) addUser(conn net.Conn) (characterID string, err error) {
 		character := msg.(*lurk.Character)
 		if e := g.validateCharacter(character); e != cross.NoError {
 			g.mu.Unlock()
-			if err := g.sendError(conn, e, "Your [CHARACTER] has invalid stats"); err != nil {
+			if err := g.sendError(conn,
+				e,
+				fmt.Sprintf("Your [CHARACTER] has invalid stats. Error: '%s'", cross.ErrorCodeErrors[e]),
+			); err != nil {
 				return characterID, err
 			}
 			continue
