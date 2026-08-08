@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 stop () {
     pid=$(ps axu | grep ./$1 | head -n 1 | grep -oP '^\S+\s+\K\S+')
     lines=$(ps axu | grep ./$1 | wc -l)
@@ -37,10 +35,13 @@ start_client(){
     mv colonel_graph ../../../bin/
     cd ../../../bin/
 
-    echo "Starting Client"
-    nohup ./colonel_graph > client.out &
+    while true; do
+        echo "Starting Client"
+        ./colonel_graph > client.out
+        echo "Client stopped, restarting in 30 seconds..."
+        sleep 30    
+    done
 
-    echo "Client successfully started"
     exit
 }
 start_server(){
@@ -55,11 +56,12 @@ start_server(){
     mv enders_game ../../../bin/
     cd ../../../bin/
 
-    echo "Starting Ender's Game Server"
-    nohup ./enders_game > server.out &
-
-    echo "Server successfully started"
-    exit
+    while true; do
+        echo "Starting Ender's Game Server"
+        ./enders_game > server.out
+        echo "Server stopped, restarting in 30 seconds..."
+        sleep 30
+    done
 }
 
 check=0
@@ -77,9 +79,4 @@ while [ $check == 0 ]; do
         break
     fi
 done
-
-
-
-
-
 
