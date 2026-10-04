@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Clayal10/enders_game/cmd/client/code/client"
+	"github.com/Clayal10/enders_game/cmd/client/web/client"
 )
 
 const setupEP = "/lurk-client/setup/"
