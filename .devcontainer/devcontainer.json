@@ -1,25 +1,25 @@
 {
-	"name": "Ender's Game",
-
+  	"name": "Ender's Game",
 	"image": "mcr.microsoft.com/devcontainers/go:2-1.27-bookworm",
+  	"postCreateCommand": "/workspaces/enders_game/.devcontainer/postCreateCommand.sh",
 
-	"postCreateCommand": "/workspaces/enders_game/.devcontainer/postCreateCommand.sh",
-
-	// GPU usage permissions
-	"runArgs": [
-    	"--device=/dev/dri:/dev/dri",
-    	"--volume=/tmp/.X11-unix:/tmp/.X11-unix:ro"
-  	],
-
+	"mounts": [
+	  "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+	],	
 	"containerEnv": {
-    	"DISPLAY": "${localEnv:DISPLAY}"
-  	},
-
+	  "DISPLAY": "${localEnv:DISPLAY}"
+	},	
+	// GPU RUN ARGS
+	"runArgs": [
+	  "--net=host",
+	  "--ipc=host",
+	  "--device=/dev/dri:/dev/dri"
+	],	
 	"features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:4.1.2": {
-      "version": "latest",
-      "moby": true
-    }
-  },
-  "remoteUser": "vscode"
+	  "ghcr.io/devcontainers/features/docker-in-docker:4.1.2": {
+	    "version": "latest",
+	    "moby": true
+	  }
+	},
+	"remoteUser": "vscode"
 }
