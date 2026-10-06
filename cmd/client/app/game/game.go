@@ -8,7 +8,7 @@ import (
 )
 
 //go:embed resources/*
-var resourceDirectory embed.FS
+var resourceFS embed.FS
 
 type Game struct {
 	*resources
@@ -41,5 +41,5 @@ func (g *Game) getResources() *resources {
 	if g.resources != nil {
 		return g.resources
 	}
-	resourceDirectory.ReadFile("space_gopher.png")
+	resourceFS.ReadFile("space_gopher.png")
 }
