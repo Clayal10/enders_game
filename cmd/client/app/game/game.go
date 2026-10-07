@@ -4,6 +4,7 @@ import (
 	"embed"
 	_ "embed"
 	"image"
+	"image/color"
 	_ "image/png"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,21 +20,24 @@ type Game struct {
 }
 
 type resources struct {
-	images map[string]*ebiten.Image // key is file name
+	images  map[string]*ebiten.Image            // key is file name
+	objects map[string]*ebiten.DrawImageOptions // key is same for images=
 }
 
-// Update proceeds the game state.
-// Update is called every tick (1/60 [s] by default).
 func (g *Game) Update() error {
-	// Write your game's logical update.
+	// The Gopher
+	op := g.resources.objects[gopher]
+	op.GeoM.Translate(5, 5)
+
 	return nil
 }
 
-// Draw draws the game screen.
-// Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *Game) Draw(screen *ebiten.Image) {
-	// Write your game's rendering.
-	op := &ebiten.DrawImageOptions{}
+	screen.Fill(color.RGBA{0, 0xA, 0xC, 0xFF})
+
+	// The Gopher
+	op := g.resources.objects[gopher]
+	op.GeoM.Scale(0.1, 0.1)
 	screen.DrawImage(g.resources.images[gopher], op)
 }
 
@@ -49,6 +53,7 @@ func (g *Game) SetResources() error {
 	}
 
 	images := make(map[string]*ebiten.Image)
+	objects := make(map[string]*ebiten.DrawImageOptions)
 
 	// Make into some iterable loop if we have more images
 	file, err := resourceFS.Open(gopher)
@@ -59,9 +64,14 @@ func (g *Game) SetResources() error {
 	if err == nil {
 		ebImage := ebiten.NewImageFromImage(image)
 		images[gopher] = ebImage
+		// allocate a new image option to be associated when drawing the image
+		objects[gopher] = &ebiten.DrawImageOptions{}
 	}
 
-	g.resources = &resources{images: images}
+	g.resources = &resources{
+		images:  images,
+		objects: objects,
+	}
 
 	return err
 }

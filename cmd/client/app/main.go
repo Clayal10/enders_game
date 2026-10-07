@@ -14,7 +14,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ebiten.SetWindowSize(640, 480)
+	ebiten.SetWindowSize(1080, 720)
 	ebiten.SetWindowTitle("Lurk Client")
 
 	if err := ebiten.RunGame(game); err != nil {
