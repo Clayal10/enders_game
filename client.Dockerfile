@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 COPY go.mod go.sum ./
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -o lx-client cmd/client/app/*
-RUN CGO_ENABLED=1 GOOS=windows go build -o client.exe cmd/client/app/*
+RUN CGO_ENABLED=1 GOOS=linux go build -o lx-client cmd/client/app/*.go
+RUN CGO_ENABLED=1 GOOS=windows go build -o client.exe cmd/client/app/*.go
 
 FROM scratch AS exporter
 COPY --from=builder /app/lx-client .

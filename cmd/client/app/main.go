@@ -10,6 +10,10 @@ import (
 
 func main() {
 	game := &game.Game{}
+	if err := game.SetResources(); err != nil {
+		log.Fatal(err)
+	}
+
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Lurk Client")
 
