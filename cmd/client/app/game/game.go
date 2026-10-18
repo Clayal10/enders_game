@@ -13,7 +13,40 @@ import (
 //go:embed resources/*
 var resourceFS embed.FS
 
-const gopher = "resources/space_gopher.png"
+type elemAttr int
+
+const (
+	scaleX elemAttr = iota
+	rotationX
+	translationX
+	rotationY
+	scaleY
+	translationY
+)
+
+type elem struct {
+	i, j int
+}
+
+var elementMap = map[elemAttr]elem{
+	scaleX:       {0, 0},
+	rotationX:    {0, 1},
+	translationX: {0, 2},
+	rotationY:    {1, 0},
+	scaleY:       {1, 1},
+	translationY: {1, 2},
+}
+
+func getElement(e elemAttr) (int, int) {
+	return elementMap[e].i, elementMap[e].j
+}
+
+const (
+	gopher          = "resources/space_gopher.png"
+	gopherSize      = 0.1
+	gopherSpeed     = 4
+	gopherSpeedSlow = 2
+)
 
 type Game struct {
 	*resources
@@ -27,7 +60,25 @@ type resources struct {
 func (g *Game) Update() error {
 	// The Gopher
 	op := g.resources.objects[gopher]
-	op.GeoM.Translate(5, 5)
+	var speed float64 = gopherSpeed
+	// Speed
+	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) {
+		speed = gopherSpeedSlow
+	}
+
+	// Movement
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
+		op.GeoM.Translate(0, -speed)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
+		op.GeoM.Translate(0, speed)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
+		op.GeoM.Translate(-speed, 0)
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
+		op.GeoM.Translate(speed, 0)
+	}
 
 	return nil
 }
@@ -37,7 +88,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// The Gopher
 	op := g.resources.objects[gopher]
-	op.GeoM.Scale(0.1, 0.1)
+
+	i, j := getElement(scaleX)
+	op.GeoM.SetElement(i, j, 0.1)
+	i, j = getElement(scaleY)
+	op.GeoM.SetElement(i, j, 0.1)
 	screen.DrawImage(g.resources.images[gopher], op)
 }
 
